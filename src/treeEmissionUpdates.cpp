@@ -180,32 +180,38 @@ NumericMatrix updateTreeEmisProbFlexMixCpp(NumMatList& data, NumMatList& scaleFa
     for(int j=0;j<nobs;j++){
       if(j >= deletionRanges[i](delInd,0) && j < deletionRanges[i](delInd,1)){ // if in a deletion region just set probability of a peak to -Inf  and log probability of no element to 0
 	logProb(j,0)=0;
-	logProb(j,1)=-100;//- std::numeric_limits<double>::infinity();
+	logProb(j,1)=- std::numeric_limits<double>::infinity();
       }
       else { // If not in a deletion do normal calculation
 	if(j == deletionRanges[i](delInd,1)){
 	  delInd=delInd+1;
+	}	
+	if(scaleFactors[i](j,0)!=0){ // if scale factor is zero do normal calculation
+	  NumericVector cProb(ncomp);
+	  // Sum over replicates
+	  for(int k=0;k<nrpl;k++){
+	    // Compute the probability for the background state
+	    double expMuBack=spMuBack(0,k)*scaleFactors[i](j,0);
+	    double expSizeBack= 1.0/(dispParams(0)+dispParams(1)/expMuBack);
+	    logProb(j,0) = logProb(j,0) + R::dnbinom_mu(data[i](j,k),expSizeBack,expMuBack,true);
+	    // Compute the probability for the active state, summing over all components	
+	    for(int m=0;m<ncomp;m++){
+	      double expMu=spMixPeak(m,k)*scaleFactors[i](j,0);
+	    double expSize= 1.0/(dispParams(0)+dispParams(1)/expMu);
+	    cProb(m) = cProb(m) + R::dnbinom_mu(data[i](j,k),expSize,expMu,true);
+	    //if(isnan(R::dnbinom_mu(data[i](j,k),expSize,expMu,true))){
+	    //  Rcout << data[i](j,k) << m << " " <<  k << " "  << expMu << " " << spMixPeak(m,k) << " " << scaleFactors[i](j,0) << std::endl;
+	    // }
+	    }
+	  } // exiting iteration over replicates
+	  logProb(j,1)=logSumExp(cProb+log(weights[i]));
 	}
-	NumericVector cProb(ncomp);
-	// Sum over replicates
-	for(int k=0;k<nrpl;k++){
-	  // Compute the probability for the background state
-	double expMuBack=spMuBack(0,k)*scaleFactors[i](j,0);
-	double expSizeBack= 1.0/(dispParams(0)+dispParams(1)/expMuBack);
-	logProb(j,0) = logProb(j,0) + R::dnbinom_mu(data[i](j,k),expSizeBack,expMuBack,true);
-	// Compute the probability for the active state, summing over all components	
-	for(int m=0;m<ncomp;m++){
-	  double expMu=spMixPeak(m,k)*scaleFactors[i](j,0);
-	  double expSize= 1.0/(dispParams(0)+dispParams(1)/expMu);
-	  cProb(m) = cProb(m) + R::dnbinom_mu(data[i](j,k),expSize,expMu,true);
-	  //if(isnan(R::dnbinom_mu(data[i](j,k),expSize,expMu,true))){
-	  //  Rcout << data[i](j,k) << m << " " <<  k << " "  << expMu << " " << spMixPeak(m,k) << " " << scaleFactors[i](j,0) << std::endl;
-	  // }
+	else { // If the scale factor is zero just set probability of active state to 0.01 (1/10th of inactive state)
+	  logProb(j,1)=log(0.1);
 	}
-	} // exiting iteration over replicates
-	logProb(j,1)=logSumExp(cProb+log(weights[i]));
       }
-    } // exiting calculation of probability of peak/no-peak for species i over all positions
+    }
+    // exiting calculation of probability of peak/no-peak for species i over all positions
     // Now iterate over states
     for(int l=0;l<nstates;l++){
       for(int j=0;j<nobs;j++){

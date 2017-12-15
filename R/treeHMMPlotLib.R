@@ -54,7 +54,7 @@ plot.tree.hmm <- function(hmm,viterbi=NULL,marginal=NULL,start=NA_real_,end=NA_r
                   ## dat.by=(log(dat.max)-log(dat.min))/5
                   ## dat.seq=round(exp(seq(log(dat.min),log(dat.max),dat.by)),2)
                   dat.by=(dat.max-dat.min)/5
-                  dat.seq=round(seq(dat.min,dat.max,dat.by),2)
+                  dat.seq=round(seq(dat.min,dat.max,dat.by),2) 
                   if(plot.type=="heatmap"){
                       dat[,.id:=factor(as.character(.id),levels=names(hmm$emission$data[[chain]]))]
                       g.dat=ggplot2::ggplot()+geom_raster(data=dat,ggplot2::aes(x=loci,y=.id,fill=value),inherit.aes=FALSE)+
@@ -62,23 +62,29 @@ plot.tree.hmm <- function(hmm,viterbi=NULL,marginal=NULL,start=NA_real_,end=NA_r
                           ggplot2::ylab("Species")+
                           ggplot2::scale_x_continuous(name=chrom,breaks=loci.breaks,labels=x.labs,limits=c(chrom.lim[1],chrom.lim[2]))+
                           ggplot2::guides(fill=guide_colorbar(title="Trait Value"))+
-                          cowplot::theme_cowplot(axis.title.y=element_blank())
+                          cowplot::theme_cowplot()+
+                          ggplot2::theme(axis.title.y=ggplot2::element_blank())
                       pdf(NULL)
                       g.dat <- gtable::gtable_add_cols(ggplot2::ggplotGrob(g.dat), unit(2,"cm"),0)
                       g.dat <- gtable::gtable_add_grob(g.dat, ggplot2::ggplotGrob(ggtree::ggtree(hmm$emission$invariants$tree)),
                                                t = 5, l=1, b=6, r=1)
                       dev.off()
                   } else if (plot.type=="dot") {
+                      ## Add data.table to put line at dat.min
+                      dat.line=data.table(x1=min(dat$loci),x2=max(dat$loci),y=dat.min,.id=factor(names(hmm$emission$data[[chain]])[-1],levels=rev(names(hmm$emission$data[[chain]])[-1])))
+                      ## Convert species names to factors so they will plot in correct order
                       dat[,.id:=factor(as.character(.id),levels=rev(names(hmm$emission$data[[chain]])))]
                       g.dat=ggplot2::ggplot()+
+                          ggplot2::geom_abline(data = dat.line, aes(intercept=y,slope=0), color="black", size=0.1)+
                           ggplot2::geom_point(data=dat,ggplot2::aes(x=loci,y=value,color=.id,fill=.id),inherit.aes=FALSE,size=0.5)+
                           ggplot2::facet_grid(.id~.)+
                           ggplot2::ylab("Species")+
                           ggplot2::scale_x_continuous(name=chrom,breaks=loci.breaks,labels=x.labs,limits=c(chrom.lim[1],chrom.lim[2]))+
-                          cowplot::theme_cowplot(axis.title.y=ggplot2::element_blank(),strip.text.y = ggplot2::element_blank())+
+                          cowplot::theme_cowplot()+
+                          ggplot2::theme(axis.title.y=ggplot2::element_blank(),strip.text.y = ggplot2::element_blank())+
                           ggplot2::scale_y_continuous(name=ggplot2::element_blank(),breaks=c(dat.min,dat.max),labels=as.character(c(dat.min,dat.max)),limits=c(dat.min,dat.max))
                       pdf(NULL)
-                      g.dat <- gtable_add_cols(ggplot2::ggplotGrob(g.dat), grid::unit(2,"cm"),0)
+                      g.dat <- gtable::gtable_add_cols(ggplot2::ggplotGrob(g.dat), grid::unit(2,"cm"),0)
                    ##   g.dat <- gtable_add_grob(g.dat, ggplotGrob(ggtree::ggtree(hmm$emission$invariants$tree)),
                    ##                             t = 5, l=1, b=6, r=1)
                       dev.off()
@@ -105,7 +111,8 @@ plot.tree.hmm <- function(hmm,viterbi=NULL,marginal=NULL,start=NA_real_,end=NA_r
                       ggplot2::scale_x_continuous(name=chrom,breaks=loci.breaks,limits=c(chrom.lim[1],chrom.lim[2]),labels=scales::comma)+
                       ggplot2::ylab("Species")+
                       ggplot2::guides(fill=ggplot2::guide_colorbar(title="Scale Factor"))+
-                      cowplot::theme_cowplot(axis.title.y=ggplot2::element_blank())
+                      cowplot::theme_cowplot()+
+                      ggplot2::theme(axis.title.y=ggplot2::element_blank())
                   ## Add tree
                   pdf(NULL)
                   g.scale <- gtable::gtable_add_cols(ggplot2::ggplotGrob(g.scale), grid::unit(2,"cm"),0)
@@ -124,18 +131,19 @@ plot.tree.hmm <- function(hmm,viterbi=NULL,marginal=NULL,start=NA_real_,end=NA_r
                   ## Add gridlines
                   g.path=ggplot2::ggplot()+
                       ggplot2::geom_raster(data=vit,ggplot2::aes(x=loci,y=variable,fill=as.factor(value)),inherit.aes=FALSE)+
-                      ggplot2::geom_segment(data=xt,aes(x=x,y=y,xend=x,yend=yend),color="gray")+
-                      ggplot2::geom_segment(data=yt,aes(x=x,y=y,xend=xend,yend=y),color="gray")+
+                      ggplot2::geom_segment(data=xt,ggplot2::aes(x=x,y=y,xend=x,yend=yend),color="gray")+
+                      ggplot2::geom_segment(data=yt,ggplot2::aes(x=x,y=y,xend=xend,yend=y),color="gray")+
                           ggplot2::scale_fill_manual(labels=c("Absent","Present"),values=c("white","#062F67"))+
                           ggplot2::ylab("Species")+
                           ggplot2::scale_x_continuous(name=chrom,breaks=loci.breaks,limits=c(chrom.lim[1],chrom.lim[2]),labels=scales::comma)+                    
                           ggplot2::guides(fill=ggplot2::guide_legend(title="Viterbi State"))+
-                          cowplot::theme_cowplot(legend.key = element_rect(colour = 'grey', fill = 'white', size = 1, linetype='solid'),axis.title.y=element_blank())
+                          cowplot::theme_cowplot()+
+                          ggplot2::theme(legend.key = ggplot2::element_rect(colour = 'grey', fill = 'white', size = 1, linetype='solid'),axis.title.y=ggplot2::element_blank())
                   ## Add tree
                   pdf(NULL)
-                  g.path <- gtable::gtable_add_cols(ggplot2::ggplotGrob(g.scale), grid::unit(2,"cm"),0)
-                  g.path <- gtable::gtable_add_grob(g.scale, ggplot2::ggplotGrob(ggtree::ggtree(hmm$emission$invariants$tree)),
-                                                     t = 5, l=1, b=6, r=1)
+                  g.path <- gtable::gtable_add_cols(ggplot2::ggplotGrob(g.path), grid::unit(2,"cm"),0)
+                  g.path <- gtable::gtable_add_grob(g.path, ggplot2::ggplotGrob(ggtree::ggtree(hmm$emission$invariants$tree)),
+                                                    t = 5, l=1, b=6, r=1)
                   dev.off()
 
               }
@@ -154,11 +162,12 @@ plot.tree.hmm <- function(hmm,viterbi=NULL,marginal=NULL,start=NA_real_,end=NA_r
                       ggplot2::ylab("Species")+
                       ggplot2::scale_x_continuous(name=chrom,breaks=loci.breaks,limits=c(chrom.lim[1],chrom.lim[2]),labels=scales::comma)+
                       ggplot2::guides(fill=guide_colorbar(title="Probability of Being\n Active"))+
-                      cowplot::theme_cowplot(axis.title.y=ggplot2::element_blank())
+                      cowplot::theme_cowplot()+
+                      ggplot2::theme(axis.title.y=ggplot2::element_blank())
                   ## Add tree
                   pdf(NULL)
-                  g.mar <- gtable::gtable_add_cols(ggplot2::ggplotGrob(g.scale), grid::unit(2,"cm"),0)
-                  g.mar <- gtable::gtable_add_grob(g.scale, ggplot2::ggplotGrob(ggtree::ggtree(hmm$emission$invariants$tree)),
+                  g.mar <- gtable::gtable_add_cols(ggplot2::ggplotGrob(g.mar), grid::unit(2,"cm"),0)
+                  g.mar <- gtable::gtable_add_grob(g.mar, ggplot2::ggplotGrob(ggtree::ggtree(hmm$emission$invariants$tree)),
                                                      t = 5, l=1, b=6, r=1)
                   dev.off()
 
