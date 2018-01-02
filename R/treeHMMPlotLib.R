@@ -1,7 +1,7 @@
 ## Now some methods to plot HMM
 
 #' @export
-plot.tree.hmm <- function(hmm,viterbi=NULL,marginal=NULL,start=NA_real_,end=NA_real_,chain=1,dat.min=1,dat.max=50,plot.type="dot", show.bins=TRUE){
+plot.tree.hmm <- function(hmm,viterbi=NULL,marginal=NULL,geneAnnotations=NULL,start=NA_real_,end=NA_real_,chain=1,dat.min=1,dat.max=50,plot.type="dot",show.bins=TRUE){
               ## If start and end not set, use full data length as default
               if(is.na(start))
                   start=1
@@ -9,6 +9,10 @@ plot.tree.hmm <- function(hmm,viterbi=NULL,marginal=NULL,start=NA_real_,end=NA_r
                   end=nrow(hmm$emission$emissionLogProb[[chain]])
               if(start>end){
                   stop("Start must be less than end")
+              }
+              ## Check that gene models are in GRangesList if not null
+              if(!is.null(geneAnnotations) & class(geneAnnotations)[1]!="GRangesList"){
+                  ## stop("GeneAnnotations must be in GRangesList format for ggbio.")
               }
               ## Calculate genomic position mapping
               chrom=hmm$emission$invariants$bed[chain,]$chrom
@@ -25,6 +29,33 @@ plot.tree.hmm <- function(hmm,viterbi=NULL,marginal=NULL,start=NA_real_,end=NA_r
               } else {
                   x.labs=scales::comma(loci.breaks)
               }
+              ## If geneAnnotations are present
+              if(!is.null(geneAnnotations)){
+                  dbcon <- RSQLite::dbConnect(RSQLite::SQLite(),dbname=geneAnnotations)
+                  dt=data.table::as.data.table(RSQLite::dbGetQuery(dbcon, "SELECT * FROM transcript
+                                            INNER JOIN gene ON transcript._tx_id = gene._tx_id
+                                           WHERE tx_chrom= :chr AND ((tx_start > :start AND tx_start < :end) OR (tx_end > :start AND tx_end < :end))",
+                      params=data.frame(chr=chrom,start=chrom.lim[1],end=chrom.lim[2])))
+                  ## Extract total region covered by gene and clip to query region
+                  dt=dt[,.(chrom=tx_chrom[1],start=max(chrom.lim[1],min(tx_start)),end=min(chrom.lim[2],max(tx_end)),gene_name=gene_name[1],strand=tx_strand[1],gene_type=gene_type[1]),by="gene_id"]
+
+                  ## Convert to IRanges to check for overlaps
+                  gtf=with(dt,IRanges::IRanges(start,end))
+                  overlaps=data.table::as.data.table(IRanges::findOverlaps(gtf))
+                  tracks=max(overlaps[,length(subjectHits),by="queryHits"]$V1)
+                  
+                  dt[,tracks:=1:tracks]
+                  offset=rep(c(0.3,-0.3),nrow(dt))
+                  dt[,name.pos:=offset[1:length(gene_name)],by="tracks"]
+                  
+                  g.gene <- ggplot2::ggplot(dt,ggplot2::aes(ymin=tracks - 0.16,ymax=tracks+0.16,xmin=start,xmax=end,color=gene_type,fill=gene_type))+
+                      ggplot2::geom_rect()+
+                      cowplot::theme_cowplot()+
+                      ggplot2::geom_text(ggplot2::aes(x=(start+end)/2,y=tracks+name.pos,label=paste0(gene_name,"(",strand,")")))+
+                      ggplot2::guides(fill=ggplot2::guide_legend(title="Gene Type"),color=FALSE)+
+                      ggplot2::theme(line = ggplot2::element_blank(), axis.text.x = ggplot2::element_blank(), axis.text.y = ggplot2::element_blank() , title = ggplot2::element_blank())
+
+              }              
               ## Set tick width and positions
               num.species=length(hmm$emission$invariants$tree$tip.label)
               x.tick.width=100*thmm$emission$invariants$binSize
@@ -61,7 +92,7 @@ plot.tree.hmm <- function(hmm,viterbi=NULL,marginal=NULL,start=NA_real_,end=NA_r
                           ggplot2::scale_fill_gradient(limits=c(dat.min,dat.max),labels=as.character(dat.seq),breaks=dat.seq,low="#C1E7FA", high="#062F67",na.value="white")+
                           ggplot2::ylab("Species")+
                           ggplot2::scale_x_continuous(name=chrom,breaks=loci.breaks,labels=x.labs,limits=c(chrom.lim[1],chrom.lim[2]))+
-                          ggplot2::guides(fill=guide_colorbar(title="Trait Value"))+
+                          ggplot2::guides(fill=ggplot2::guide_colorbar(title="Trait Value"))+
                           cowplot::theme_cowplot()+
                           ggplot2::theme(axis.title.y=ggplot2::element_blank())
                       pdf(NULL)
@@ -75,7 +106,7 @@ plot.tree.hmm <- function(hmm,viterbi=NULL,marginal=NULL,start=NA_real_,end=NA_r
                       ## Convert species names to factors so they will plot in correct order
                       dat[,.id:=factor(as.character(.id),levels=rev(names(hmm$emission$data[[chain]])))]
                       g.dat=ggplot2::ggplot()+
-                          ggplot2::geom_abline(data = dat.line, aes(intercept=y,slope=0), color="black", size=0.1)+
+                          ggplot2::geom_abline(data = dat.line, ggplot2::aes(intercept=y,slope=0), color="black", size=0.1)+
                           ggplot2::geom_point(data=dat,ggplot2::aes(x=loci,y=value,color=.id,fill=.id),inherit.aes=FALSE,size=0.5)+
                           ggplot2::facet_grid(.id~.)+
                           ggplot2::ylab("Species")+
@@ -161,7 +192,7 @@ plot.tree.hmm <- function(hmm,viterbi=NULL,marginal=NULL,start=NA_real_,end=NA_r
                       ggplot2::geom_segment(data=yt,ggplot2::aes(x=x,y=y,xend=xend,yend=y),color="gray")+
                       ggplot2::ylab("Species")+
                       ggplot2::scale_x_continuous(name=chrom,breaks=loci.breaks,limits=c(chrom.lim[1],chrom.lim[2]),labels=scales::comma)+
-                      ggplot2::guides(fill=guide_colorbar(title="Probability of Being\n Active"))+
+                      ggplot2::guides(fill=ggplot2::guide_colorbar(title="Probability of Being\n Active"))+
                       cowplot::theme_cowplot()+
                       ggplot2::theme(axis.title.y=ggplot2::element_blank())
                   ## Add tree
@@ -173,7 +204,7 @@ plot.tree.hmm <- function(hmm,viterbi=NULL,marginal=NULL,start=NA_real_,end=NA_r
 
               }
               ## Add trees
-              g <- cowplot::plot_grid(g.dat,g.mar,g.path,g.scale,ncol=1,labels = c("A", "B","C","D"), align = "v",axis="lr",rel_heights = c(2,1,1,1))
+              g <- cowplot::plot_grid(g.gene,g.dat,g.mar,g.path,g.scale,ncol=1,labels = c("A","", "B","C","D"), align = "v",axis="lr",rel_heights = c(1,2,1,1,1))
               return(g)
           }
           
