@@ -29,6 +29,8 @@ plot.tree.hmm <- function(hmm,viterbi=NULL,marginal=NULL,geneAnnotations=NULL,st
               } else {
                   x.labs=scales::comma(loci.breaks)
               }
+              ## Create plot list
+              plist=list()
               ## If geneAnnotations are present
               if(!is.null(geneAnnotations)){
                   dbcon <- RSQLite::dbConnect(RSQLite::SQLite(),dbname=geneAnnotations)
@@ -54,6 +56,7 @@ plot.tree.hmm <- function(hmm,viterbi=NULL,marginal=NULL,geneAnnotations=NULL,st
                       ggplot2::geom_text(ggplot2::aes(x=(start+end)/2,y=tracks+name.pos,label=paste0(gene_name,"(",strand,")")))+
                       ggplot2::guides(fill=ggplot2::guide_legend(title="Gene Type"),color=FALSE)+
                       ggplot2::theme(line = ggplot2::element_blank(), axis.text.x = ggplot2::element_blank(), axis.text.y = ggplot2::element_blank() , title = ggplot2::element_blank())
+                  plist[[1]]=g.gene
 
               }              
               ## Set tick width and positions
@@ -120,6 +123,7 @@ plot.tree.hmm <- function(hmm,viterbi=NULL,marginal=NULL,geneAnnotations=NULL,st
                    ##                             t = 5, l=1, b=6, r=1)
                       dev.off()
                   }
+                  plist[[2]]=g.dat
                   ## Plot scale factors
                   sca=data.table::data.table(index=start:end,loci=chrom.loci[start:end],do.call(cbind,hmm$emission$invariants$scaleFactors[[chain]])[start:end,])
                   data.table::setnames(sca,colnames(sca)[c(-1,-2)],hmm$emission$invariants$tree$tip.label)
@@ -150,6 +154,7 @@ plot.tree.hmm <- function(hmm,viterbi=NULL,marginal=NULL,geneAnnotations=NULL,st
                   g.scale <- gtable::gtable_add_grob(g.scale, ggplot2::ggplotGrob(ggtree::ggtree(hmm$emission$invariants$tree)),
                                            t = 5, l=1, b=6, r=1)
                   dev.off()
+                  plist[[5]]=g.scale
 
               }
               if(!is.null(viterbi)){
@@ -176,6 +181,7 @@ plot.tree.hmm <- function(hmm,viterbi=NULL,marginal=NULL,geneAnnotations=NULL,st
                   g.path <- gtable::gtable_add_grob(g.path, ggplot2::ggplotGrob(ggtree::ggtree(hmm$emission$invariants$tree)),
                                                     t = 5, l=1, b=6, r=1)
                   dev.off()
+                  plist[[4]]=g.path
 
               }
               if(!is.null(marginal)){
@@ -201,10 +207,16 @@ plot.tree.hmm <- function(hmm,viterbi=NULL,marginal=NULL,geneAnnotations=NULL,st
                   g.mar <- gtable::gtable_add_grob(g.mar, ggplot2::ggplotGrob(ggtree::ggtree(hmm$emission$invariants$tree)),
                                                      t = 5, l=1, b=6, r=1)
                   dev.off()
-
+                  plist[[3]]=g.mar
               }
-              ## Add trees
-              g <- cowplot::plot_grid(g.gene,g.dat,g.mar,g.path,g.scale,ncol=1,labels = c("A","", "B","C","D"), align = "v",axis="lr",rel_heights = c(1,2,1,1,1))
+              ## Remove unplotted plots
+              keep=which(!unlist(lapply(plist,is.null)))
+              plist=plist[keep]
+              lab.pool=c("A","B","C","D")[1:sum(keep!=1)]
+              labs=character(length(keep))
+              labs[keep!=1]=lab.pool
+              ## Arrange plots 
+              g <- cowplot::plot_grid(plotlist=plist,ncol=1,labels = labs, align = "v",axis="lr",rel_heights = c(1,2,1,1,1)[keep])
               return(g)
           }
           
