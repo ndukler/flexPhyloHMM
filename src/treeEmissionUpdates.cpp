@@ -186,7 +186,7 @@ NumericMatrix updateTreeEmisProbFlexMixCpp(NumMatList& data, NumMatList& scaleFa
 	if(j == deletionRanges[i](delInd,1)){
 	  delInd=delInd+1;
 	}	
-	if(scaleFactors[i](j,0)!=0){ // if scale factor is zero do normal calculation
+	if(scaleFactors[i](j,0)!=0){ // if scale factor is not zero do normal calculation
 	  NumericVector cProb(ncomp);
 	  // Sum over replicates
 	  for(int k=0;k<nrpl;k++){
@@ -207,7 +207,8 @@ NumericMatrix updateTreeEmisProbFlexMixCpp(NumMatList& data, NumMatList& scaleFa
 	  logProb(j,1)=logSumExp(cProb+log(weights[i]));
 	}
 	else { // If the scale factor is zero just set probability of active state to 0.01 (1/10th of inactive state)
-	  logProb(j,1)=log(0.1);
+	  logProb(j,1)=0;
+	  logProb(j,0)=0;
 	}
       }
     }
