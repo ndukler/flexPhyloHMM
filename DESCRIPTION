@@ -15,6 +15,7 @@ Imports:
 	 experimentalDataTools,
 	 data.table,
 	 phangorn,
+	 Matrix,
 	 R6,
 	 gridExtra,
 	 scales,

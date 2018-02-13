@@ -15,7 +15,7 @@ getDescendants<-function(tree,node,curr=NULL,onlyTips=FALSE){
 ## 1) A matrix that shows all possible states given a number of "changepoints" along the tree
 ## 2) A matrix that records the products of the edge lengths of the branches the changepoints  occur and the
 ##     corresponding number of  changepoints
-enumerateTreeStates <-  function(tree,changepoints=1){
+enumerateTreeStates <-  function(tree,changepoints=1,absorbing.state=FALSE){
     if(changepoints < 0 | changepoints %% 1 > 0){
         stop("changepoints must be an integer and >= 0")
     }
@@ -50,6 +50,9 @@ enumerateTreeStates <-  function(tree,changepoints=1){
     rorder=order(rowSums(leafConfig))
     el=el[rorder]
     leafConfig=leafConfig[rorder,]
+    if(absorbing.state){
+        leafConfig=rbind(leafConfig,matrix(rep(2,ncol(leafConfig)),nrow=1))
+    }
      return(list(config=leafConfig,edgeLengthProd=el))
 }
 
@@ -66,7 +69,7 @@ infiniteMutProb <- function(tree,tree.states,parms=list(inactive.prob=0.95,rate=
     } else if(!is.data.table(tree.states)){
         stop("tree.states must be a matrix, data.frame, or data.table")
     }
-    setnames(tree.states,colnames(tree.states),tree$tip.label)
+    data.table::setnames(tree.states,colnames(tree.states),tree$tip.label)
     ## Create phyDat alignment objects
     pd=phangorn::phyDat(tree.states,type="USER",levels=c(0,1))
     ## Estimate liklihood of each tree
@@ -78,4 +81,25 @@ infiniteMutProb <- function(tree,tree.states,parms=list(inactive.prob=0.95,rate=
     } else {
         return(list(tree=tree,states=tree.states,prob=exp(state.log.probs)))
     }    
+}
+
+
+treeStateLL <- function(tree,tree.states,parms=list(inactive.prob=0.95,rate=10^-3)){
+    if(is.matrix(tree.states) | is.data.frame(tree.states)){
+        if(ncol(tree.states)==length(tree$tip.label)){
+            tree.states=data.table::as.data.table(tree.states)
+        } else if(nrow(tree.states)==length(tree$tip.label)){
+            tree.states=data.table::as.data.table(t(tree.states))
+        } else {
+            stop("tree.states must have the same number of rows or columns as there are leaves on the tree")
+        }
+    } else if(!is.data.table(tree.states)){
+        stop("tree.states must be a matrix, data.frame, or data.table")
+    }
+    data.table::setnames(tree.states,colnames(tree.states),tree$tip.label)
+    ## Create phyDat alignment objects
+    pd=phangorn::phyDat(tree.states,type="USER",levels=c(0,1))
+    ## Estimate liklihood of each tree
+    state.log.probs=phangorn::pml(tree,data=pd,rate=parms$rate,bf=c(parms$inactive.prob,1-parms$inactive.prob))
+    return(list(tree=tree,states=tree.states,prob=state.log.probs$siteLik))
 }

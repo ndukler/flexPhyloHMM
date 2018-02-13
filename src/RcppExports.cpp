@@ -6,6 +6,59 @@
 
 using namespace Rcpp;
 
+// absorbingStateLogProb
+NumericVector absorbingStateLogProb(NumericMatrix& conditionalEmisLogProb, NumericVector& dataLogProb, NumericVector& enumLogProb, double absorbLogProb);
+RcppExport SEXP _flexPhyloHMM_absorbingStateLogProb(SEXP conditionalEmisLogProbSEXP, SEXP dataLogProbSEXP, SEXP enumLogProbSEXP, SEXP absorbLogProbSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< NumericMatrix& >::type conditionalEmisLogProb(conditionalEmisLogProbSEXP);
+    Rcpp::traits::input_parameter< NumericVector& >::type dataLogProb(dataLogProbSEXP);
+    Rcpp::traits::input_parameter< NumericVector& >::type enumLogProb(enumLogProbSEXP);
+    Rcpp::traits::input_parameter< double >::type absorbLogProb(absorbLogProbSEXP);
+    rcpp_result_gen = Rcpp::wrap(absorbingStateLogProb(conditionalEmisLogProb, dataLogProb, enumLogProb, absorbLogProb));
+    return rcpp_result_gen;
+END_RCPP
+}
+// computeLeafProb
+NumericMatrix computeLeafProb(NumMatList& data, NumMatList& scaleFactors, NumMatList& deletionRanges, NumMatList muBack, NumMatList mixPeak, NumVecList weights, NumVecList sampleNormFactor, NumericVector dispParams);
+RcppExport SEXP _flexPhyloHMM_computeLeafProb(SEXP dataSEXP, SEXP scaleFactorsSEXP, SEXP deletionRangesSEXP, SEXP muBackSEXP, SEXP mixPeakSEXP, SEXP weightsSEXP, SEXP sampleNormFactorSEXP, SEXP dispParamsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< NumMatList& >::type data(dataSEXP);
+    Rcpp::traits::input_parameter< NumMatList& >::type scaleFactors(scaleFactorsSEXP);
+    Rcpp::traits::input_parameter< NumMatList& >::type deletionRanges(deletionRangesSEXP);
+    Rcpp::traits::input_parameter< NumMatList >::type muBack(muBackSEXP);
+    Rcpp::traits::input_parameter< NumMatList >::type mixPeak(mixPeakSEXP);
+    Rcpp::traits::input_parameter< NumVecList >::type weights(weightsSEXP);
+    Rcpp::traits::input_parameter< NumVecList >::type sampleNormFactor(sampleNormFactorSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type dispParams(dispParamsSEXP);
+    rcpp_result_gen = Rcpp::wrap(computeLeafProb(data, scaleFactors, deletionRanges, muBack, mixPeak, weights, sampleNormFactor, dispParams));
+    return rcpp_result_gen;
+END_RCPP
+}
+// logSumExp
+double logSumExp(NumericVector x);
+RcppExport SEXP _flexPhyloHMM_logSumExp(SEXP xSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::traits::input_parameter< NumericVector >::type x(xSEXP);
+    rcpp_result_gen = Rcpp::wrap(logSumExp(x));
+    return rcpp_result_gen;
+END_RCPP
+}
+// logMinusExp
+double logMinusExp(double a, NumericVector x);
+RcppExport SEXP _flexPhyloHMM_logMinusExp(SEXP aSEXP, SEXP xSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::traits::input_parameter< double >::type a(aSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type x(xSEXP);
+    rcpp_result_gen = Rcpp::wrap(logMinusExp(a, x));
+    return rcpp_result_gen;
+END_RCPP
+}
 // updateNBEmisProbCpp
 NumericMatrix updateNBEmisProbCpp(NumericMatrix& data, NumericVector& scaleFactors, int& nstates, NumericMatrix& muBack, NumericMatrix& muPeak, NumericMatrix& size);
 RcppExport SEXP _flexPhyloHMM_updateNBEmisProbCpp(SEXP dataSEXP, SEXP scaleFactorsSEXP, SEXP nstatesSEXP, SEXP muBackSEXP, SEXP muPeakSEXP, SEXP sizeSEXP) {
@@ -143,8 +196,41 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// updateTreeEnumeratedStates
+NumericMatrix updateTreeEnumeratedStates(NumericMatrix& leafProbs, NumericMatrix& treeStates, int nstates, int absorbingState);
+RcppExport SEXP _flexPhyloHMM_updateTreeEnumeratedStates(SEXP leafProbsSEXP, SEXP treeStatesSEXP, SEXP nstatesSEXP, SEXP absorbingStateSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< NumericMatrix& >::type leafProbs(leafProbsSEXP);
+    Rcpp::traits::input_parameter< NumericMatrix& >::type treeStates(treeStatesSEXP);
+    Rcpp::traits::input_parameter< int >::type nstates(nstatesSEXP);
+    Rcpp::traits::input_parameter< int >::type absorbingState(absorbingStateSEXP);
+    rcpp_result_gen = Rcpp::wrap(updateTreeEnumeratedStates(leafProbs, treeStates, nstates, absorbingState));
+    return rcpp_result_gen;
+END_RCPP
+}
+// treeLL
+NumericVector treeLL(const NumericMatrix& leafProb, const NumericMatrix& qConcat, const NumericMatrix& traversal, const NumericVector& tips, const NumericVector& logBaseFreq);
+RcppExport SEXP _flexPhyloHMM_treeLL(SEXP leafProbSEXP, SEXP qConcatSEXP, SEXP traversalSEXP, SEXP tipsSEXP, SEXP logBaseFreqSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const NumericMatrix& >::type leafProb(leafProbSEXP);
+    Rcpp::traits::input_parameter< const NumericMatrix& >::type qConcat(qConcatSEXP);
+    Rcpp::traits::input_parameter< const NumericMatrix& >::type traversal(traversalSEXP);
+    Rcpp::traits::input_parameter< const NumericVector& >::type tips(tipsSEXP);
+    Rcpp::traits::input_parameter< const NumericVector& >::type logBaseFreq(logBaseFreqSEXP);
+    rcpp_result_gen = Rcpp::wrap(treeLL(leafProb, qConcat, traversal, tips, logBaseFreq));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
+    {"_flexPhyloHMM_absorbingStateLogProb", (DL_FUNC) &_flexPhyloHMM_absorbingStateLogProb, 4},
+    {"_flexPhyloHMM_computeLeafProb", (DL_FUNC) &_flexPhyloHMM_computeLeafProb, 8},
+    {"_flexPhyloHMM_logSumExp", (DL_FUNC) &_flexPhyloHMM_logSumExp, 1},
+    {"_flexPhyloHMM_logMinusExp", (DL_FUNC) &_flexPhyloHMM_logMinusExp, 2},
     {"_flexPhyloHMM_updateNBEmisProbCpp", (DL_FUNC) &_flexPhyloHMM_updateNBEmisProbCpp, 6},
     {"_flexPhyloHMM_updateNBEmisProbDTCpp", (DL_FUNC) &_flexPhyloHMM_updateNBEmisProbDTCpp, 6},
     {"_flexPhyloHMM_updatePeakFlexMixCpp", (DL_FUNC) &_flexPhyloHMM_updatePeakFlexMixCpp, 8},
@@ -153,6 +239,8 @@ static const R_CallMethodDef CallEntries[] = {
     {"_flexPhyloHMM_updateTreeEmisProbDTWindowCpp", (DL_FUNC) &_flexPhyloHMM_updateTreeEmisProbDTWindowCpp, 7},
     {"_flexPhyloHMM_updateTreeEmisProbGMixCpp", (DL_FUNC) &_flexPhyloHMM_updateTreeEmisProbGMixCpp, 8},
     {"_flexPhyloHMM_updateTreeEmisProbFlexMixCpp", (DL_FUNC) &_flexPhyloHMM_updateTreeEmisProbFlexMixCpp, 10},
+    {"_flexPhyloHMM_updateTreeEnumeratedStates", (DL_FUNC) &_flexPhyloHMM_updateTreeEnumeratedStates, 4},
+    {"_flexPhyloHMM_treeLL", (DL_FUNC) &_flexPhyloHMM_treeLL, 5},
     {NULL, NULL, 0}
 };
 

@@ -222,3 +222,23 @@ NumericMatrix updateTreeEmisProbFlexMixCpp(NumMatList& data, NumMatList& scaleFa
   }
   return(out);
 }
+
+
+// [[Rcpp::export]]
+NumericMatrix updateTreeEnumeratedStates(NumericMatrix& leafProbs, NumericMatrix& treeStates, int nstates, int absorbingState) {
+  int nspecies=treeStates.ncol();
+  int nobs=leafProbs.nrow();
+  // Initialize logProb output matrix
+  NumericMatrix out(nobs,nstates);
+  // Iterate over species
+  for(int i=0;i<nspecies;i++){
+    int specCol=i*2;
+    // Now iterate over states
+    for(int l=0;l<nstates-absorbingState;l++){
+      for(int j=0;j<nobs;j++){
+	out(j,l)=out(j,l)+leafProbs(j,specCol+treeStates(l,i)); //Add the probability of 0/1 for species i to all the corresponding states
+      }
+    }
+  }
+  return(out);
+}

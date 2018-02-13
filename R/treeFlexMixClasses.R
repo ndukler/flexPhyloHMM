@@ -11,13 +11,23 @@
 treeEmission <- R6::R6Class("treeEmission",inherit=flexHMM::Emission)
 
 treeEmission$set("public","updateEmissionProbabilities",function(){
-    if(sum(self$getParameterTable()$replicate!=-1)>0){ stop("model doesn't allow for replicated parameters yet")}
-    ## Initialize emission Log prob matrix
-    cl=as.numeric(unlist(lapply(self$data,function(x) nrow(x[[1]]))))
-    self$emissionLogProb=foreach(l=1:length(cl)) %do% {
-        matrix(0,nrow=cl[l],ncol=self$nstates)
-    }
+    ## Compute the probabilities of 0/1 at the leafs
+    self$computeLeafProbabilities()
     
+    ## Update the probabilities of the enumerated states
+    for(chain in 1:length(self$data)){
+        self$emissionLogProb[[chain]] = updateTreeEnumeratedStates(self$invariants$leafProb[[chain]],
+                                self$invariants$treeStates,
+                                self$nstates,
+                                self$invariants$absorbing.state)
+    }
+} ,overwrite=TRUE)
+
+## Function that computes the probabilities of 0/1 at each leaf
+treeEmission$set("public","computeLeafProbabilities",function(){
+    if(sum(self$getParameterTable()$replicate!=-1)>0){ stop("model doesn't allow for replicated parameters yet")}
+    ## Initialize emission leaf prob matrix
+    self$invariants$leafProb=list()
     ## For each species
     for(chain in 1:length(self$data)){
         ## Compute the mu's for the active state
@@ -30,23 +40,50 @@ treeEmission$set("public","updateEmissionProbabilities",function(){
         meansList=foreach(s=si) %do%{
             ## Transform the mu's to make them identifiable
            return(matrix(cumsum(c(self$params[self$getParamIndicies(paste0("mix.mu.base.",s))],self$params[self$getParamIndicies(paste0("mix.mu.",s))])),ncol=1))
-        }
+       }
         si=iterators::iter(self$invariants$tree$tip.label)
         weightsList=foreach(s=si) %do% {
             ## Construct the weights via stick-breaking
             return(computeWeights(self$params[self$getParamIndicies(paste0("mix.weight.",s))]))
         }
-        self$emissionLogProb[[chain]] = updateTreeEmisProbFlexMixCpp(
-                                self$data[[chain]],
+        self$invariants$leafProb[[chain]] = computeLeafProb(self$data[[chain]],
                                 self$invariants$scaleFactors[[chain]],
                                 self$invariants$deletionRanges[[chain]],
-                                self$invariants$treeStates,
-                                self$nstates,
-                                backList,
-                                meansList,
+                                backList,meansList,
                                 weightsList,
                                 self$invariants$sampleNormFactors,
                                 self$invariants$dispersionParams)
+    }
+},overwrite=TRUE)
+
+## Function that updates the probability of the absorbing state at every step
+treeEmission$set("public","forcedEmissionUpdates",function(){
+    ## Only do forced updates if the model contains an absorbing state
+    if(self$invariants$absorbing.state){
+        ## Check that the enumerated emission state probabilities have been calculated
+        if(is.null(self$emissionLogProb)){
+            self$updateEmissionProbabilities()
+        }
+        ## Compute the probability of each enumerated tree state and the inactive tree state without data
+        trans=self$hmm$transition
+        pruning.params=computeASRunInvariants(trans$invariants$tree,trans$params[trans$getParamIndicies("rate")],trans$params[trans$getParamIndicies("inactive.freq")])
+        ## Convert tree states to leaf log-probabilities, where if the absorbing state is present, the probability of all states on the leaves are set to 1 to calcuate the partition function
+        lp=matrix(nrow=trans$nstates,ncol=2*ncol(trans$invariants$treeStates))
+        lp[,seq(1,ncol(lp),2)]=abs(trans$invariants$treeStates-1)
+        lp[,seq(2,ncol(lp),2)]=abs(trans$invariants$treeStates)
+        lp=lp[-self$nstates,]
+        lp=log(lp)
+        ## Compute the probability of all the enumerated leaf patterns
+        enum.tree.log.prob=with(pruning.params,treeLL(lp, qConcat = Q.concat, traversal = tt$traversal, tips = tt$tips, logBaseFreq = lbf))
+        ## Compute the probability of the tree absorbing state as the complement of all the other states 
+        absorb.tree.log.prob=logMinusExp(0,enum.tree.log.prob) ## Absorbing state prob
+        ## For each chain update the probability of the absorbing state
+        for(chain in 1:length(self$invariants$leafProb)){
+            ## Compute the liklihood over all leaf labelings of the  tree given probabalistic tip labels 
+            data.log.prob=with(pruning.params,treeLL(self$invariants$leafProb[[chain]], qConcat = Q.concat, traversal = tt$traversal, tips = tt$tips, logBaseFreq = lbf))
+            ## Update the absorbing state probabilities
+            self$emissionLogProb[[chain]][,self$nstates]=absorbingStateLogProb(self$emissionLogProb[[chain]][,-self$nstates],data.log.prob,enum.tree.log.prob,absorb.tree.log.prob)   
+        }
     }
 },overwrite=TRUE)
 
@@ -85,22 +122,37 @@ treeEmission$set("public","maskData",function(maskSignalThresh=0.05){
 treeTransitionSC <- R6::R6Class("treeTransitionSC",inherit=flexHMM::Transition)
 ## Compute tree transition probabilities (creates sparse transition matrix)
 treeTransitionSC$set("public","updateTransitionProbabilities",function(){
-    ## Create transition matric
-    self$transitionLogProb=matrix(0,self$nstates,self$nstates)
-     ## Compute the marginal probablilities for all states except the fully inactive state and use it to weight the first row of transition probabilities
-    state.probs=infiniteMutProb(self$invariants$tree,self$invariants$treeStates,parms=list(inactive.prob=self$params[self$getParamIndicies("inactive.freq")],rate=self$params[self$getParamIndicies("rate")]),TRUE)
+    ## Create transition matrix
+    self$transitionLogProb=matrix(-Inf,self$nstates,self$nstates)
+    ## Compute the parameter values required to run the pruning algorithm
+    pruning.params=computeASRunInvariants(self$invariants$tree,self$params[self$getParamIndicies("rate")],self$params[self$getParamIndicies("inactive.freq")])
+    ## Convert tree states to leaf log-probabilities, where if the absorbing state is present, the probability of all states on the leaves are set to 1 to calcuate the partition function
+    lp=matrix(nrow=self$nstates,ncol=2*ncol(self$invariants$treeStates))
+    lp[,seq(1,ncol(lp),2)]=abs(self$invariants$treeStates-1)
+    lp[,seq(2,ncol(lp),2)]=abs(self$invariants$treeStates)
+    lp[lp>1]=1
+    lp=log(lp)
+    ## Compute the state marginal probabilities
+    if(self$invariants$absorbing.state){
+        self$invariants$treeLL=with(pruning.params,treeLL(lp[-self$nstates,], qConcat = Q.concat, traversal = tt$traversal, tips = tt$tips, logBaseFreq = lbf))
+        norm=logMinusExp(0,self$invariants$treeLL[1]) ## The normalizing factor is the L_norm=L(all states)-L(inactive state)
+        enum.state.log.prob=self$invariants$treeLL[-1]-norm ## p(state_enum)=L(state_enum)/L_norm
+        absorb.state.log.prob=logMinusExp(0,logSumExp(enum.state.log.prob)) ## Absorbing state prob
+        state.log.prob=c(enum.state.log.prob,absorb.state.log.prob)
+    } else {
+        self$invariants$treeLL=with(pruning.params,treeLL(lp, qConcat = Q.concat, traversal = tt$traversal, tips = tt$tips, logBaseFreq = lbf))
+        norm=logSumExp(self$invariants$treeLL[-1]) ## The normalizing factor is the sum of all enumerated states
+        state.log.prob=self$invariants$treeLL[-1]-norm ## p(state_enum)=L(state_enum)/L_norm
+    }
     ## Solve for rho_active parameter as function of marginal state probabilities and p_inactive (probabilities are in log space)
-    ## rho.act=1-(exp(state.probs$prob[1]-logSumExp(state.probs$prob[-1])) * (1-self$params[self$getParamIndicies("autocor.inactive")]))
-    rho.inact=1-((1-self$params[self$getParamIndicies("autocor.active")])*exp(logSumExp(state.probs$prob[-1])-state.probs$prob[1]))
+    rho.inact=1-((1-self$params[self$getParamIndicies("autocor.active")])*exp(logSumExp(self$invariants$treeLL[-1])-self$invariants$treeLL[1]))
     ## Set all sub-diagonal values in the first column
-    self$transitionLogProb[-1,1]=1-self$params[self$getParamIndicies("autocor.active")]
+    self$transitionLogProb[-1,1]=log(1-self$params[self$getParamIndicies("autocor.active")])
     ## Set all elements of the diagonal to the appropriate autocorrelation
-    diag(self$transitionLogProb)= self$params[self$getParamIndicies("autocor.active")]
-    self$transitionLogProb[1,1]=rho.inact
+    diag(self$transitionLogProb)= log(self$params[self$getParamIndicies("autocor.active")])
     ## Set all values in the first row of the transition matrix
-    sp=exp(state.probs$prob[-1]-logSumExp(state.probs$prob[-1]))
-    self$transitionLogProb[1,-1]=(1-rho.inact)*sp
-    self$transitionLogProb=log(self$transitionLogProb)
+    self$transitionLogProb[1,-1]=log(1-rho.inact)+state.log.prob
+    self$transitionLogProb[1,1]=log(rho.inact)
 })
 
 ## Tree transition with no stationarity constraint
@@ -108,29 +160,41 @@ treeTransitionSC$set("public","updateTransitionProbabilities",function(){
 treeTransition <- R6::R6Class("treeTransition",inherit=flexHMM::Transition)
 ## Compute tree transition probabilities (creates sparse transition matrix)
 treeTransition$set("public","updateTransitionProbabilities",function(){
-    ## Create transition matric
-    self$transitionLogProb=matrix(0,self$nstates,self$nstates)
-     ## Compute the marginal probablilities for all states except the fully inactive state and use it to weight the first row of transition probabilities
-    state.probs=infiniteMutProb(self$invariants$tree,self$invariants$treeStates,parms=list(inactive.prob=self$params[self$getParamIndicies("inactive.freq")],rate=self$params[self$getParamIndicies("rate")]),TRUE)
+    ## Create transition matrix
+    self$transitionLogProb=matrix(-Inf,self$nstates,self$nstates)
+    ## Compute the parameter values required to run the pruning algorithm
+    pruning.params=computeASRunInvariants(self$invariants$tree,self$params[self$getParamIndicies("rate")],self$params[self$getParamIndicies("inactive.freq")])
+    ## Convert tree states to leaf log-probabilities, where if the absorbing state is present, the probability of all states on the leaves are set to 1 to calcuate the partition function
+    lp=matrix(nrow=self$nstates,ncol=2*ncol(self$invariants$treeStates))
+    lp[,seq(1,ncol(lp),2)]=abs(self$invariants$treeStates-1)
+    lp[,seq(2,ncol(lp),2)]=abs(self$invariants$treeStates)
+    lp[lp>1]=1
+    lp=log(lp)
+    ## Compute the state marginal probabilities
+    if(self$invariants$absorbing.state){
+        self$invariants$treeLL=with(pruning.params,treeLL(lp[-self$nstates,], qConcat = Q.concat, traversal = tt$traversal, tips = tt$tips, logBaseFreq = lbf))
+        norm=logMinusExp(0,self$invariants$treeLL[1]) ## The normalizing factor is the L_norm=L(all states)-L(inactive state)
+        enum.state.log.prob=self$invariants$treeLL[-1]-norm ## p(state_enum)=L(state_enum)/L_norm
+        absorb.state.log.prob=logMinusExp(0,enum.state.log.prob) ## Absorbing state prob
+        state.log.prob=c(enum.state.log.prob,absorb.state.log.prob)
+    } else {
+        self$invariants$treeLL=with(pruning.params,treeLL(lp, qConcat = Q.concat, traversal = tt$traversal, tips = tt$tips, logBaseFreq = lbf))
+        norm=logSumExp(self$invariants$treeLL[-1]) ## The normalizing factor is the sum of all enumerated states
+        state.log.prob=self$invariants$treeLL[-1]-norm ## p(state_enum)=L(state_enum)/L_norm
+    }    
     ## Set all sub-diagonal values in the first column
-    self$transitionLogProb[-1,1]=1-self$params[self$getParamIndicies("autocor.active")]
+    self$transitionLogProb[-1,1]=log(1-self$params[self$getParamIndicies("autocor.active")])
     ## Set all elements of the diagonal to the appropriate autocorrelation
-    diag(self$transitionLogProb)= self$params[self$getParamIndicies("autocor.active")]
-    self$transitionLogProb[1,1]=self$params[self$getParamIndicies("autocor.inactive")]
+    diag(self$transitionLogProb)= log(self$params[self$getParamIndicies("autocor.active")])
+    self$transitionLogProb[1,1]=log(self$params[self$getParamIndicies("autocor.inactive")])
     ## Set all values in the first row of the transition matrix
-    sp=exp(state.probs$prob[-1]-logSumExp(state.probs$prob[-1]))
-    self$transitionLogProb[1,-1]=(1-self$params[self$getParamIndicies("autocor.inactive")])*sp
-    self$transitionLogProb=log(self$transitionLogProb)
+    self$transitionLogProb[1,-1]=log(1-self$params[self$getParamIndicies("autocor.inactive")])+state.log.prob
 })
 
 
 ####
 ## Misc. functions
 ####
-logSumExp <- function(x){
-    a=max(x)
-    return(a+log(sum(exp(x-a))))
-}
 
 ## Constructs set of ranges that should be considered deletions
 ## Ranges are 0-based and have format [,)
@@ -147,10 +211,10 @@ computeDeletionRanges <- function(scaleFactors,emptyRadius=10){
 
 ## Build tree hmm using pre-fit data
 #' @export
-buildTreeFlexMixFit <- function(dataList,tree,preFitEmissions,scaleFactor,dispersionParams,sampleNormFactors,bed,binSize=100,maxChangepoints=1,delRadius=10,treeParams=NULL,stationary.constraint=FALSE,threads=1){
+buildTreeFlexMixFit <- function(dataList,tree,preFitEmissions,scaleFactor,dispersionParams,sampleNormFactors,bed,binSize=100,maxChangepoints=1,delRadius=10,treeParams=NULL,stationary.constraint=FALSE,threads=1,absorbing.state=FALSE){
     tree=ape::unroot(tree)
     ## Compute number of states
-    tree.states=unique(enumerateTreeStates(tree,maxChangepoints)$config)
+    tree.states=unique(enumerateTreeStates(tree,maxChangepoints,absorbing.state)$config)
     nstates=nrow(tree.states)
     ## Build emission parameter list for each species
     param=unlist(lapply(as.list(tree$tip.label),function(x){
@@ -189,7 +253,7 @@ buildTreeFlexMixFit <- function(dataList,tree,preFitEmissions,scaleFactor,disper
             sampleNormFactors=lapply(as.list(tree$tip.label), function(x) {
                 sampleNormFactors[colnames(dataList[[1]][[x]])]$norm.factors
             }),
-            bed=bed, binSize=binSize)
+            bed=bed, binSize=binSize,absorbing.state=absorbing.state)
         )
     tree.emis$invariants$deletionRanges=computeDeletionRanges(tree.emis$invariants$scaleFactor,delRadius)
     ## Set emission object parameters
@@ -203,7 +267,8 @@ buildTreeFlexMixFit <- function(dataList,tree,preFitEmissions,scaleFactor,disper
             tree.emis$setParamValue(paste0("mix.weight.",p),value=subT[.("mix.weight",r)]$value,chain=-1,replicate=r)
         }
     }
-
+    
+    ## If a list of tree parameters is not supplied
     if(is.null(treeParams)){
         ## Provide initial estimates of the auto-correlation parameters from pre-fit HMMs
         estim.autocor.inactive=mean(unlist(lapply(preFitEmissions,function(x) x[paramName=="s11"]$value)))
@@ -218,20 +283,26 @@ buildTreeFlexMixFit <- function(dataList,tree,preFitEmissions,scaleFactor,disper
                 nstates=nstates,
                 lowerBound=list(autocor.active=0.6,autocor.inactive=0.6,inactive.freq=0.8,rate=10^-8),
                 upperBound=list(autocor.active=0.98,autocor.inactive=0.99999,inactive.freq=0.999,rate=10^-1),
-                invariants=list(tree=tree,treeStates=tree.states))
+                invariants=list(tree=tree,treeStates=tree.states,absorbing.state=absorbing.state))
         } else {
             tree.trans=treeTransitionSC$new(params=list(autocor.active=estim.autocor.active,inactive.freq=estim.inact.freq,rate=10^-4),nstates=nstates,
                 lowerBound=list(autocor.active=0.6,inactive.freq=0.8,rate=10^-5),
                 upperBound=list(autocor.active=0.98,inactive.freq=0.999,rate=10^-1),
-                invariants=list(tree=tree,treeStates=tree.states))    
+                invariants=list(tree=tree,treeStates=tree.states,absorbing.state=absorbing.state))    
         }        
-    } else if(is.list(treeParams)){
+    } else if(is.list(treeParams)){ ## If a list of tree parameters is supplied
+        ## Figure out if the parameter set matches the transition model with or without a stationary constraint
         if(length(treeParams) == 4 & all(names(treeParams) %in% c("autocor.active","autocor.inactive","inactive.freq","rate"))){
             tree.trans=treeTransition$new(params=treeParams,
                 nstates=nstates,
                 lowerBound=list(autocor.active=0.6,autocor.inactive=0.6,inactive.freq=0.8,rate=10^-8),
                 upperBound=list(autocor.active=0.98,autocor.inactive=0.99999,inactive.freq=0.999,rate=10^-1),
-                invariants=list(tree=tree,treeStates=tree.states))
+                invariants=list(tree=tree,treeStates=tree.states,absorbing.state=absorbing.state))
+        } else if(length(treeParams) == 3 & all(names(treeParams) %in% c("autocor.active","inactive.freq","rate"))){
+            tree.trans=treeTransitionSC$new(params=tree.params,nstates=nstates,
+                lowerBound=list(autocor.active=0.6,inactive.freq=0.8,rate=10^-5),
+                upperBound=list(autocor.active=0.98,inactive.freq=0.999,rate=10^-1),
+                invariants=list(tree=tree,treeStates=tree.states,absorbing.state=absorbing.state))    
         } else {
             write("Incorrect tree parameter specified",stdout())
         }        
@@ -242,8 +313,6 @@ buildTreeFlexMixFit <- function(dataList,tree,preFitEmissions,scaleFactor,disper
     return(tree.hmm)
 }
 
-
-## Misc. functions.
 computeWeights <- function(weight.params){
     mix.weights=numeric(length(weight.params)+1)
     for(z in 1:length(weight.params)){
