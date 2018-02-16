@@ -7,6 +7,8 @@
 #' @return list of parameter values that are constant for calculating the probability of the absorbing state accross sites
 #' @export
 computeASRunInvariants <- function(tree,rate,base.freq.zero){
+    ## Ensure the tree is sorted correctly
+    tree=reorder(tree,"postorder")
     base.freq=c(base.freq.zero,1-base.freq.zero)
     ## Pre-calculate everything needed for an iterative traversal
     tt=createTraversalTable(tree)
