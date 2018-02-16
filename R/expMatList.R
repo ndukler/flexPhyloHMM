@@ -4,7 +4,7 @@
 #' @param branch.lengths the branch lengths of interes
 #' @param log if TRUE returns log transition matricies
 #' @return a list of transition matricies, one entry for each specified branch length
-#' @export
+#' @export 
 expMatList <- function(rate,base.freq.zero,branch.lengths,log=TRUE){
     bf=c(base.freq.zero,1-base.freq.zero)
     ## construct the scaled rate matrix
