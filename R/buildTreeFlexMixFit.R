@@ -1,6 +1,6 @@
 ## Build tree hmm using pre-fit data
 #' @export
-buildTreeFlexMixFit <- function(dataList,tree,preFitEmissions,scaleFactor,dispersionParams,sampleNormFactors,bed,binSize=100,maxChangepoints=1,delRadius=10,treeParams=NULL,stationary.constraint=FALSE,threads=1,absorbing.state=FALSE){
+buildTreeFlexMixFit <- function(dataList,tree,preFitEmissions,scaleFactor,dispersionParams,sampleNormFactors,bed,binSize=100,maxChangepoints=1,delRadius=10,treeParams=NULL,stationary.constraint=FALSE,threads=1,absorbing.state=FALSE,log.dir="."){
     tree=ape::unroot(tree)
     ## Compute number of states
     tree.states=unique(enumerateTreeStates(tree,maxChangepoints,absorbing.state)$config)
@@ -98,6 +98,6 @@ buildTreeFlexMixFit <- function(dataList,tree,preFitEmissions,scaleFactor,disper
     } else {
         write("treeParams must be a list",stdout())
     }
-    tree.hmm=flexHMM::HMM$new(tree.emis,tree.trans,threads=threads)
+    tree.hmm=flexHMM::HMM$new(tree.emis,tree.trans,threads=threads,log.dir=log.dir)
     return(tree.hmm)
 }

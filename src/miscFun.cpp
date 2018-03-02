@@ -23,8 +23,7 @@ double logSumExp(NumericVector x){
 //' @export
 // [[Rcpp::export(rng = false)]]
 double logMinusExp(double a, NumericVector x){
-  double out=a + log(std::max(0.0,1 - sum(exp(x - a))));
-  return(out);
+  return(log(std::max(0.0,exp(a)-exp(logSumExp(x)))));
 }
 
 NumericMatrix replicatePmat(NumericMatrix pmat,int nrpl){
