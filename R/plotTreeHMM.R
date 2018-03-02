@@ -130,7 +130,7 @@ plot.tree.hmm <- function(hmm,viterbi=NULL,marginal=NULL,calls.bed=NULL,geneAnno
                   dat.by=(dat.max-dat.min)/5
                   dat.seq=round(seq(dat.min,dat.max,dat.by),2) 
                   if(plot.type=="heatmap"){
-                      dat[,.id:=factor(as.character(.id),levels=names(hmm$emission$data[[chain]]))]
+                      dat[,.id:=factor(as.character(.id),levels=hmm$emission$invariants$tree$tip.label)]
                       g.dat=ggplot2::ggplot()+geom_raster(data=dat,ggplot2::aes(x=loci,y=.id,fill=value),inherit.aes=FALSE)+
                           ggplot2::scale_fill_gradient(limits=c(dat.min,dat.max),labels=as.character(dat.seq),breaks=dat.seq,low="#C1E7FA", high="#062F67",na.value="white")+
                           ggplot2::ylab("Species")+
@@ -145,9 +145,9 @@ plot.tree.hmm <- function(hmm,viterbi=NULL,marginal=NULL,calls.bed=NULL,geneAnno
                       dev.off()
                   } else if (plot.type=="dot") {
                       ## Add data.table to put line at dat.min
-                      dat.line=data.table(x1=min(dat$loci),x2=max(dat$loci),y=dat.min,.id=factor(names(hmm$emission$data[[chain]])[-1],levels=rev(names(hmm$emission$data[[chain]])[-1])))
+                      dat.line=data.table(x1=min(dat$loci),x2=max(dat$loci),y=dat.min,.id=factor(hmm$emission$invariants$tree$tip.label,levels=hmm$emission$invariants$tree$tip.label))
                       ## Convert species names to factors so they will plot in correct order
-                      dat[,.id:=factor(as.character(.id),levels=rev(names(hmm$emission$data[[chain]])))]
+                      dat[,.id:=factor(as.character(.id),levels=hmm$emission$invariants$tree$tip.label)]
                       g.dat=ggplot2::ggplot()+
                           ggplot2::geom_abline(data = dat.line, ggplot2::aes(intercept=y,slope=0), color="black", size=0.1)+
                           ggplot2::geom_point(data=dat,ggplot2::aes(x=loci,y=value,color=.id,fill=.id),inherit.aes=FALSE,size=0.5)+
@@ -156,7 +156,8 @@ plot.tree.hmm <- function(hmm,viterbi=NULL,marginal=NULL,calls.bed=NULL,geneAnno
                           ggplot2::scale_x_continuous(name=chrom,breaks=loci.breaks,labels=x.labs,limits=c(chrom.lim[1],chrom.lim[2]))+
                           cowplot::theme_cowplot()+
                           ggplot2::theme(axis.title.y=ggplot2::element_blank(),strip.text.y = ggplot2::element_blank())+
-                          ggplot2::scale_y_continuous(name=ggplot2::element_blank(),breaks=c(dat.min,dat.max),labels=as.character(c(dat.min,dat.max)),limits=c(dat.min,dat.max))
+                          ggplot2::scale_y_continuous(name=ggplot2::element_blank(),breaks=c(dat.min,dat.max),labels=as.character(c(dat.min,dat.max)),limits=c(dat.min,dat.max))+
+                          ggplot2::theme(legend.position="none")
                      ## Add calls overlay
                       if(nrow(spec)>1){
                           g.dat <- g.dat +
@@ -174,11 +175,11 @@ plot.tree.hmm <- function(hmm,viterbi=NULL,marginal=NULL,calls.bed=NULL,geneAnno
                       sca=data.table::data.table(index=start:end,loci=chrom.loci[start:end],do.call(cbind,hmm$emission$invariants$scaleFactors[[chain]])[start:end,])
                       data.table::setnames(sca,colnames(sca)[c(-1,-2)],hmm$emission$invariants$tree$tip.label)
                       sca=data.table::melt(sca,id.vars=c('index','loci'))
-                      sca[,variable:=factor(variable,levels=hmm$emission$invariants$tree$tip.label)]
+                      sca[,variable:=factor(variable,levels=rev(hmm$emission$invariants$tree$tip.label))]
                       sca[value>1,value:=1] ## hacky fix for earlylier off by one error, will fix later
                       ## Add deletion ranges
                       del=data.table::rbindlist(lapply(hmm$emission$invariants$deletionRanges[[chain]], function(x) data.table::data.table(s=x[,1]+1,e=x[,2]+1)),idcol=TRUE)
-                      del[,.id:=factor(.id,levels=hmm$emission$invariants$tree$tip.label)]
+                      del[,.id:=factor(.id,levels=rev(hmm$emission$invariants$tree$tip.label))]
                       del=del[with(del,IRanges::findOverlaps(IRanges::IRanges(s,e),IRanges::IRanges(start,end)))@from]
                       del[s<start,s:=start]
                       del[e>end,e:=end]
@@ -209,14 +210,14 @@ plot.tree.hmm <- function(hmm,viterbi=NULL,marginal=NULL,calls.bed=NULL,geneAnno
                   data.table::setnames(vit,colnames(vit)[-1],hmm$emission$invariants$tree$tip.label)
                   vit=data.table::melt(vit,id.vars='index')
                   vit[,loci:=chrom.loci[index]]
-                  vit[,variable:=factor(variable,levels=hmm$emission$invariants$tree$tip.label)]
+                  vit[,variable:=factor(variable,levels=rev(hmm$emission$invariants$tree$tip.label))]
                   ## vit[,value:=as.factor(value)]
                   ## Add gridlines
                   g.path=ggplot2::ggplot()+
                       ggplot2::geom_raster(data=vit,ggplot2::aes(x=loci,y=variable,fill=as.factor(value)),inherit.aes=FALSE)+
                       ggplot2::geom_segment(data=xt,ggplot2::aes(x=x,y=y,xend=x,yend=yend),color="gray")+
                       ggplot2::geom_segment(data=yt,ggplot2::aes(x=x,y=y,xend=xend,yend=y),color="gray")+
-                          ggplot2::scale_fill_manual(labels=c("Absent","Present","Complex"),values=c("white","#062F67","red"))+
+                          ggplot2::scale_fill_manual(labels=c("Absent","Present"),values=c("white","#062F67"))+
                           ggplot2::ylab("Species")+
                           ggplot2::scale_x_continuous(name=chrom,breaks=loci.breaks,limits=c(chrom.lim[1],chrom.lim[2]),labels=scales::comma)+                    
                           ggplot2::guides(fill=ggplot2::guide_legend(title="Viterbi State"))+
@@ -236,7 +237,7 @@ plot.tree.hmm <- function(hmm,viterbi=NULL,marginal=NULL,calls.bed=NULL,geneAnno
                   data.table::setnames(mar,colnames(mar)[-1],hmm$emission$invariants$tree$tip.label)
                   mar=data.table::melt(mar,id.vars='index')
                   mar[,loci:=chrom.loci[index]]
-                  mar[,variable:=factor(variable,levels=hmm$emission$invariants$tree$tip.label)]
+                  mar[,variable:=factor(variable,levels=rev(hmm$emission$invariants$tree$tip.label))]
                   mar[value>1,value:=1] ## deal with numeric precision placing values slightly above 1
                   g.mar=ggplot2::ggplot()+
                       ggplot2:::geom_raster(data=mar,ggplot2::aes(x=loci,y=variable,fill=value),inherit.aes=FALSE)+
@@ -267,4 +268,3 @@ plot.tree.hmm <- function(hmm,viterbi=NULL,marginal=NULL,calls.bed=NULL,geneAnno
               g <- cowplot::plot_grid(plotlist=plist,ncol=1,labels = labs, align = "v",axis="lr",rel_heights = c(1,2,1,1,1)[keep])
               return(g)
           }
-          
