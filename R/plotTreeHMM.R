@@ -211,13 +211,14 @@ plot.tree.hmm <- function(hmm,viterbi=NULL,marginal=NULL,calls.bed=NULL,geneAnno
                   vit=data.table::melt(vit,id.vars='index')
                   vit[,loci:=chrom.loci[index]]
                   vit[,variable:=factor(variable,levels=rev(hmm$emission$invariants$tree$tip.label))]
+                  vit[,value:=factor(as.character(value),levels=c('0','1','2'))]
                   ## vit[,value:=as.factor(value)]
                   ## Add gridlines
                   g.path=ggplot2::ggplot()+
-                      ggplot2::geom_raster(data=vit,ggplot2::aes(x=loci,y=variable,fill=as.factor(value)),inherit.aes=FALSE)+
+                      ggplot2::geom_raster(data=vit,ggplot2::aes(x=loci,y=variable,fill=value),inherit.aes=FALSE)+
                       ggplot2::geom_segment(data=xt,ggplot2::aes(x=x,y=y,xend=x,yend=yend),color="gray")+
                       ggplot2::geom_segment(data=yt,ggplot2::aes(x=x,y=y,xend=xend,yend=y),color="gray")+
-                          ggplot2::scale_fill_manual(labels=c("Absent","Present"),values=c("white","#062F67"))+
+                          ggplot2::scale_fill_manual(labels=c("Absent","Present","Complex"),values=c("white","#062F67","red"),drop=FALSE)+
                           ggplot2::ylab("Species")+
                           ggplot2::scale_x_continuous(name=chrom,breaks=loci.breaks,limits=c(chrom.lim[1],chrom.lim[2]),labels=scales::comma)+                    
                           ggplot2::guides(fill=ggplot2::guide_legend(title="Viterbi State"))+
