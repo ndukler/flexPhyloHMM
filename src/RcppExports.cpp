@@ -21,7 +21,7 @@ BEGIN_RCPP
 END_RCPP
 }
 // computeLeafProb
-NumericMatrix computeLeafProb(NumMatList& data, NumMatList& scaleFactors, NumMatList& deletionRanges, NumMatList muBack, NumMatList mixPeak, NumVecList weights, NumVecList sampleNormFactor, NumericVector dispParams);
+NumericMatrix computeLeafProb(NumMatList& data, NumMatList& scaleFactors, NumMatList& deletionRanges, NumMatList muBack, NumMatList mixPeak, NumVecList weights, NumVecList sampleNormFactor, NumericMatrix dispParams);
 RcppExport SEXP _flexPhyloHMM_computeLeafProb(SEXP dataSEXP, SEXP scaleFactorsSEXP, SEXP deletionRangesSEXP, SEXP muBackSEXP, SEXP mixPeakSEXP, SEXP weightsSEXP, SEXP sampleNormFactorSEXP, SEXP dispParamsSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
@@ -33,7 +33,7 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< NumMatList >::type mixPeak(mixPeakSEXP);
     Rcpp::traits::input_parameter< NumVecList >::type weights(weightsSEXP);
     Rcpp::traits::input_parameter< NumVecList >::type sampleNormFactor(sampleNormFactorSEXP);
-    Rcpp::traits::input_parameter< NumericVector >::type dispParams(dispParamsSEXP);
+    Rcpp::traits::input_parameter< NumericMatrix >::type dispParams(dispParamsSEXP);
     rcpp_result_gen = Rcpp::wrap(computeLeafProb(data, scaleFactors, deletionRanges, muBack, mixPeak, weights, sampleNormFactor, dispParams));
     return rcpp_result_gen;
 END_RCPP

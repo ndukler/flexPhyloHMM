@@ -1,6 +1,6 @@
 ## Build tree hmm using pre-fit data
 #' @export
-buildTreeFlexMixFit <- function(dataList,tree,preFitEmissions,scaleFactor,dispersionParams,sampleNormFactors,bed,binSize=100,maxChangepoints=1,delRadius=10,treeParams=NULL,stationary.constraint=FALSE,threads=1,absorbing.state=FALSE,log.dir="."){
+buildTreeFlexMixFit <- function(dataList,tree,preFitEmissions,scaleFactor,sampleNormFactors,bed,binSize=100,maxChangepoints=1,delRadius=10,treeParams=NULL,stationary.constraint=FALSE,threads=1,absorbing.state=FALSE,log.dir="."){
     tree=ape::unroot(tree)
     ## Compute number of states
     tree.states=unique(enumerateTreeStates(tree,maxChangepoints,absorbing.state)$config)
@@ -24,6 +24,12 @@ buildTreeFlexMixFit <- function(dataList,tree,preFitEmissions,scaleFactor,disper
     numComponents=nrow(preFitEmissions[[1]][paramName=="mix.weight"])+1
     ## Key sample normalization factors
     setkey(sampleNormFactors,"experiment.id")
+    ## Build matrix of parameters for dispersion function, each row corresponds to species (same order as tree leaves), each column
+    dispersionParams=matrix(0,nrow=length(tree$tip.label),ncol=2)
+    for(i in 1:length(tree$tip.label)){
+        dispersionParams[i,1]=preFitEmissions[[tree$tip.label[i]]][paramName=="asymptDisp"]$value
+        dispersionParams[i,2]=preFitEmissions[[tree$tip.label[i]]][paramName=="extraPois"]$value
+    }
     ## Build emission object - make sure that data is in the same order as the tree
     tree.emis=treeEmission$new(
         data=lapply(dataList, function(y){

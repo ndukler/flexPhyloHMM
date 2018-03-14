@@ -5,7 +5,7 @@ using namespace Rcpp;
 
 // [[Rcpp::export]]
 NumericMatrix computeLeafProb(NumMatList& data, NumMatList& scaleFactors, NumMatList& deletionRanges, 
-					   NumMatList muBack, NumMatList mixPeak, NumVecList weights, NumVecList sampleNormFactor, NumericVector dispParams) {
+					   NumMatList muBack, NumMatList mixPeak, NumVecList weights, NumVecList sampleNormFactor, NumericMatrix dispParams) {
   int nspecies=data.size();
   int nobs=data[0].nrow();
   int ncomp=weights[0].size();
@@ -42,12 +42,12 @@ NumericMatrix computeLeafProb(NumMatList& data, NumMatList& scaleFactors, NumMat
 	  for(int k=0;k<nrpl;k++){
 	    // Compute the probability for the background state
 	    double expMuBack=spMuBack(0,k)*scaleFactors[i](j,0);
-	    double expSizeBack= 1.0/(dispParams(0)+dispParams(1)/expMuBack);
+	    double expSizeBack= 1.0/(dispParams(i,0)+dispParams(i,1)/expMuBack);
 	    out(j,sCol) = out(j,sCol) + R::dnbinom_mu(data[i](j,k),expSizeBack,expMuBack,true);
 	    // Compute the probability for the active state, summing over all components	
 	    for(int m=0;m<ncomp;m++){
 	      double expMu=spMixPeak(m,k)*scaleFactors[i](j,0);
-	      double expSize= 1.0/(dispParams(0)+dispParams(1)/expMu);
+	      double expSize= 1.0/(dispParams(i,0)+dispParams(i,1)/expMu);
 	      cProb(m) = cProb(m) + R::dnbinom_mu(data[i](j,k),expSize,expMu,true);
 	    }
 	  } // exiting iteration over replicates
