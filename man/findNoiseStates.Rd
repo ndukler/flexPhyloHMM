@@ -4,16 +4,16 @@
 \alias{findNoiseStates}
 \title{Heuristically find noisy state calls}
 \usage{
-findNoiseStates(state.calls, scale.factors, treeStates, max.sep = 1)
+findNoiseStates(state.calls, scale.factors, tree.states, max.sep = 1)
 }
 \arguments{
 \item{state.calls}{a list of vectors where each element of the vector is a state call and each list index is a chain}
 
 \item{scale.factors}{list of scale factors}
 
-\item{max.sep}{Max distance allowed between two states for them to be considered potentially noisy}
-
 \item{tree.states}{0/1 matrix of tree states}
+
+\item{max.sep}{Max distance allowed between two states for them to be considered potentially noisy}
 }
 \value{
 a list of transition matricies, one entry for each specified branch length
