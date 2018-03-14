@@ -67,18 +67,19 @@ plot.tree.hmm <- function(hmm,viterbi=NULL,marginal=NULL,calls.bed=NULL,geneAnno
                       ## Convert to IRanges to check for overlaps
                       gtf=with(dt,IRanges::IRanges(start,end))
                       overlaps=data.table::as.data.table(IRanges::findOverlaps(gtf))
-                      tracks=min(max(overlaps[,length(subjectHits),by="queryHits"]$V1,2),7)
+                      tracks=min(max(overlaps[,length(subjectHits),by="queryHits"]$V1,1),7)
                       
-                      dt[,tracks:=1:tracks]
+                      dt[,track:=rep(unique(1:tracks),length.out=nrow(dt))]
                       offset=rep(c(0.3,-0.3),nrow(dt))
-                      dt[,name.pos:=offset[1:length(gene_name)],by="tracks"]
+                      dt[,name.pos:=offset[1:length(gene_name)],by="track"]
                       
-                      g.gene <- ggplot2::ggplot(dt,ggplot2::aes(ymin=tracks - 0.16,ymax=tracks+0.16,xmin=start,xmax=end,color=gene_type,fill=gene_type))+
+                      g.gene <- ggplot2::ggplot(dt,ggplot2::aes(ymin=track - 0.16,ymax=track+0.16,xmin=start,xmax=end,color=gene_type,fill=gene_type))+
                       ggplot2::geom_rect()+
                           cowplot::theme_cowplot()+
-                          ggplot2::geom_text(ggplot2::aes(x=(start+end)/2,y=tracks+name.pos,label=paste0(gene_name,"(",strand,")")))+
+                          ggplot2::geom_text(ggplot2::aes(x=(start+end)/2,y=track+name.pos,label=paste0(gene_name,"(",strand,")")))+
                           ggplot2::guides(fill=ggplot2::guide_legend(title="Gene Type"),color=FALSE)+
-                          ggplot2::theme(line = ggplot2::element_blank(), axis.text.x = ggplot2::element_blank(), axis.text.y = ggplot2::element_blank() , title = ggplot2::element_blank())
+                          ggplot2::theme(line = ggplot2::element_blank(), axis.text.x = ggplot2::element_blank(), axis.text.y = ggplot2::element_blank() , title = ggplot2::element_blank())+
+                          ggplot2::xlim(chrom.lim)
                       plist[[1]]=g.gene
                   } else {
                       plist[[1]]=ggplot2::ggplot()
