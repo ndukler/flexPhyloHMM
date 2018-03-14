@@ -94,13 +94,13 @@ treeEmission$set("public","checkInvariantValidity",function(invariants){
         stop(paste("The number of species in the tree is", ncol(invariants$treeStates), "the number in the data is", nspec))
     }
     ## Check that the length of of dispersionParams
-    if(!is.numeric(invariants$dispersionParams)){
-        stop("dispersionParams must be a numeric vector.")
+    if(!is.matrix(invariants$dispersionParams) ||  ncol(invariants$dispersionParams)!=2 || nrow(invariants$dispersionParams)!=length(invariants$tree$tip.label)){
+        stop("dispersionParams must be a matrix with two columns and the same number of rows as there are species.")
     }
-    if(length(invariants$dispersionParams)!=2){
-        stop("Length of dispersionParams must be two.")
+    if(any(is.na(invariants$dispersionParams)) | any(is.nan(invariants$dispersionParams)) | any(!is.finite(invariants$dispersionParams)) | any(invariants$dispersionParams<0)){
+        stop("All dispersion parameters must be finite, real values, greater than 0.")
     }
-})
+},overwrite=TRUE)
 
 ## Data masking function
 treeEmission$set("public","maskData",function(maskSignalThresh=0.05){
