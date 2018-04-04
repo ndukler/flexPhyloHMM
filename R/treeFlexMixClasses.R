@@ -25,35 +25,24 @@ treeEmission$set("public","updateEmissionProbabilities",function(){
 
 ## Function that computes the probabilities of 0/1 at each leaf
 treeEmission$set("public","computeLeafProbabilities",function(){
-    if(sum(self$getParameterTable()$replicate!=-1)>0){ stop("model doesn't allow for replicated parameters yet")}
-    ## Initialize emission leaf prob matrix
-    self$invariants$leafProb=list()
-    ## For each species
-    for(chain in 1:length(self$data)){
-        ## Compute the mu's for the active state
-        si=iterators::iter(self$invariants$tree$tip.label)
-        backList=foreach(s=si) %do%{
-            ## Transform the mu's to make them identifiable
-            return(matrix(self$params[self$getParamIndicies(paste0("mu.back.",s))],ncol=1))
-        }
-        si=iterators::iter(self$invariants$tree$tip.label)
-        meansList=foreach(s=si) %do%{
-            ## Transform the mu's to make them identifiable
-           return(matrix(cumsum(c(self$params[self$getParamIndicies(paste0("mix.mu.base.",s))],self$params[self$getParamIndicies(paste0("mix.mu.",s))])),ncol=1))
-       }
-        si=iterators::iter(self$invariants$tree$tip.label)
-        weightsList=foreach(s=si) %do% {
-            ## Construct the weights via stick-breaking
-            return(computeWeights(self$params[self$getParamIndicies(paste0("mix.weight.",s))]))
-        }
-        self$invariants$leafProb[[chain]] = computeLeafProb(self$data[[chain]],
-                                self$invariants$scaleFactors[[chain]],
-                                self$invariants$deletionRanges[[chain]],
-                                backList,meansList,
-                                weightsList,
-                                self$invariants$sampleNormFactors,
-                                self$invariants$dispersionParams)
+    if(is.null(self$invariants$leafProb)){
+        self$invariants$leafProb=lapply(lapply(self$data,function(x) nrow(x[[1]])),function(x) matrix(1.0,nrow=x,ncol=2*length(self$invariants$tree$tip.label)))
     }
+    backList=lapply(as.list(self$invariants$tree$tip.label),function(x) matrix(1.1,nrow=1,ncol=1))
+    meansList=lapply(as.list(self$invariants$tree$tip.label),function(x) matrix(1.1,nrow=self$invariants$numComponents,ncol=1))
+    weightsList=lapply(as.list(self$invariants$tree$tip.label),function(x) numeric(self$invariants$numComponents))
+    for(z in 1:length(self$invariants$tree$tip.label)){
+        s=self$invariants$tree$tip.label[z]
+        backList[[z]][1,1]=self$params[self$getParamIndicies(paste0("mu.back.",s))]
+        meansList[[z]][,1]=cumsum(c(self$params[self$getParamIndicies(paste0("mix.mu.base.", s))], self$params[self$getParamIndicies(paste0("mix.mu.", s))]))
+        weightsList[[z]]=computeWeights(self$params[self$getParamIndicies(paste0("mix.weight.", s))])
+    }        
+    for (chain in 1:length(self$data)){
+        self$invariants$leafProb[[chain]] = flexPhyloHMM:::computeLeafProb(self$data[[chain]], 
+                                    self$invariants$scaleFactors[[chain]], self$invariants$deletionRanges[[chain]], 
+                                    backList, meansList, weightsList, self$invariants$sampleNormFactors, 
+                                    self$invariants$dispersionParams)
+    }    
 },overwrite=TRUE)
 
 ## Function that updates the probability of the absorbing state at every step
