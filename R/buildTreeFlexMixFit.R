@@ -78,12 +78,12 @@ buildTreeFlexMixFit <- function(dataList,tree,preFitEmissions,scaleFactor,sample
                 nstates=nstates,
                 lowerBound=list(autocor.active=0.6,autocor.inactive=0.6,inactive.freq=0.8,rate=10^-8),
                 upperBound=list(autocor.active=0.98,autocor.inactive=0.99999,inactive.freq=0.999,rate=10^-1),
-                invariants=list(tree=tree,treeStates=tree.states,absorbing.state=absorbing.state))
+                invariants=list(tree=tree,treeStates=tree.states,absorbing.state=absorbing.state,max.changepoints=maxChangepoints))
         } else {
             tree.trans=treeTransitionSC$new(params=list(autocor.active=estim.autocor.active,inactive.freq=estim.inact.freq,rate=10^-4),nstates=nstates,
                 lowerBound=list(autocor.active=0.6,inactive.freq=0.8,rate=10^-5),
                 upperBound=list(autocor.active=0.98,inactive.freq=0.999,rate=10^-1),
-                invariants=list(tree=tree,treeStates=tree.states,absorbing.state=absorbing.state))    
+                invariants=list(tree=tree,treeStates=tree.states,absorbing.state=absorbing.state,max.changepoints=maxChangepoints))    
         }        
     } else if(is.list(treeParams)){ ## If a list of tree parameters is supplied
         ## Figure out if the parameter set matches the transition model with or without a stationary constraint
@@ -92,12 +92,12 @@ buildTreeFlexMixFit <- function(dataList,tree,preFitEmissions,scaleFactor,sample
                 nstates=nstates,
                 lowerBound=list(autocor.active=0.6,autocor.inactive=0.6,inactive.freq=0.8,rate=10^-8),
                 upperBound=list(autocor.active=0.98,autocor.inactive=0.99999,inactive.freq=0.999,rate=10^-1),
-                invariants=list(tree=tree,treeStates=tree.states,absorbing.state=absorbing.state))
+                invariants=list(tree=tree,treeStates=tree.states,absorbing.state=absorbing.state,max.changepoints=maxChangepoints))
         } else if(length(treeParams) == 3 & all(names(treeParams) %in% c("autocor.active","inactive.freq","rate"))){
             tree.trans=treeTransitionSC$new(params=treeParams,nstates=nstates,
                 lowerBound=list(autocor.active=0.6,inactive.freq=0.8,rate=10^-5),
                 upperBound=list(autocor.active=0.98,inactive.freq=0.999,rate=10^-1),
-                invariants=list(tree=tree,treeStates=tree.states,absorbing.state=absorbing.state))    
+                invariants=list(tree=tree,treeStates=tree.states,absorbing.state=absorbing.state,max.changepoints=maxChangepoints))    
         } else {
             write("Incorrect tree parameter specified",stdout())
         }        
