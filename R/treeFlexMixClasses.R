@@ -124,9 +124,9 @@ treeTransitionSC$set("public","updateTransitionProbabilities",function(){
     ## Compute the state marginal probabilities
     if(self$invariants$absorbing.state){
         self$invariants$treeLL=with(pruning.params,treeLL(lp[-self$nstates,], qConcat = Q.concat, traversal = tt$traversal, tips = tt$tips, logBaseFreq = lbf))
-        norm=logMinusExp(0,self$invariants$treeLL[1]) ## The normalizing factor is the L_norm=L(all states)-L(inactive state)
+        norm=log(1-exp(self$invariants$treeLL[1])) ## The normalizing factor is the L_norm=L(all states)-L(inactive state)
         enum.state.log.prob=self$invariants$treeLL[-1]-norm ## p(state_enum)=L(state_enum)/L_norm
-        absorb.state.log.prob=logMinusExp(0,logSumExp(enum.state.log.prob)) ## Absorbing state prob
+        absorb.state.log.prob=log(1-exp(logSumExp(enum.state.log.prob))) ## Absorbing state prob
         state.log.prob=c(enum.state.log.prob,absorb.state.log.prob)
     } else {
         self$invariants$treeLL=with(pruning.params,treeLL(lp, qConcat = Q.concat, traversal = tt$traversal, tips = tt$tips, logBaseFreq = lbf))
@@ -134,7 +134,7 @@ treeTransitionSC$set("public","updateTransitionProbabilities",function(){
         state.log.prob=self$invariants$treeLL[-1]-norm ## p(state_enum)=L(state_enum)/L_norm
     }
     ## Solve for rho_active parameter as function of marginal state probabilities and p_inactive (probabilities are in log space)
-    rho.inact=1-((1-self$params[self$getParamIndicies("autocor.active")])*exp(logSumExp(self$invariants$treeLL[-1])-self$invariants$treeLL[1]))
+    rho.inact=1-((1-self$params[self$getParamIndicies("autocor.active")])*exp(logSumExp(self$invariants$treeLL[-1])-exp(self$invariants$treeLL[1])))
     ## Set all sub-diagonal values in the first column
     self$transitionLogProb[-1,1]=log(1-self$params[self$getParamIndicies("autocor.active")])
     ## Set all elements of the diagonal to the appropriate autocorrelation
@@ -162,9 +162,9 @@ treeTransition$set("public","updateTransitionProbabilities",function(){
     ## Compute the state marginal probabilities
     if(self$invariants$absorbing.state){
         self$invariants$treeLL=with(pruning.params,treeLL(lp[-self$nstates,], qConcat = Q.concat, traversal = tt$traversal, tips = tt$tips, logBaseFreq = lbf))
-        norm=logMinusExp(0,self$invariants$treeLL[1]) ## The normalizing factor is the L_norm=L(all states)-L(inactive state)
+        norm=log(1-exp(self$invariants$treeLL[1])) ## The normalizing factor is the L_norm=L(all states)-L(inactive state)
         enum.state.log.prob=self$invariants$treeLL[-1]-norm ## p(state_enum)=L(state_enum)/L_norm
-        absorb.state.log.prob=logMinusExp(0,enum.state.log.prob) ## Absorbing state prob
+        absorb.state.log.prob=log(1-exp(logSumExp(enum.state.log.prob))) ## Absorbing state prob
         state.log.prob=c(enum.state.log.prob,absorb.state.log.prob)
     } else {
         self$invariants$treeLL=with(pruning.params,treeLL(lp, qConcat = Q.concat, traversal = tt$traversal, tips = tt$tips, logBaseFreq = lbf))
