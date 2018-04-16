@@ -85,16 +85,16 @@ simpleTwoStateTransition <- R6::R6Class("simpleTwoStateTransition",inherit=flexH
 
 simpleTwoStateTransition$set("public","updateTransitionProbabilities",function(){
     ## iterate over all states
-    self$transitionLogProb=log(matrix(c(self$params[self$getParamIndicies("s11",1)],1-self$params[self$getParamIndicies("s11",1)],
-                                        1-self$params[self$getParamIndicies("s22",1)],self$params[self$getParamIndicies("s22",1)]),ncol=2,byrow=TRUE))
+    self$transitionLogProb=log(matrix(c(self$params[self$getParamIndicies("s11")],1-self$params[self$getParamIndicies("s11")],
+                                        1-self$params[self$getParamIndicies("s22")],self$params[self$getParamIndicies("s22")]),ncol=2,byrow=TRUE))
 })
 
 simpleTwoStateTransitionLog <- R6::R6Class("simpleTwoStateTransitionLog",inherit=flexHMM::Transition)
 
 simpleTwoStateTransitionLog$set("public","updateTransitionProbabilities",function(){
     ## iterate over all states
-    self$transitionLogProb=matrix(c(self$params[self$getParamIndicies("s11",1)],log(1-exp(self$params[self$getParamIndicies("s11",1)])),
-                                        log(1-exp(self$params[self$getParamIndicies("s22",1)])),self$params[self$getParamIndicies("s22",1)]),ncol=2,byrow=TRUE)
+    self$transitionLogProb=matrix(c(self$params[self$getParamIndicies("s11")],log(1-exp(self$params[self$getParamIndicies("s11")])),
+                                        log(1-exp(self$params[self$getParamIndicies("s22")])),self$params[self$getParamIndicies("s22")]),ncol=2,byrow=TRUE)
 })
 
 ## Misc. functions.
