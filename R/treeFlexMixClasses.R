@@ -134,7 +134,7 @@ treeTransitionSC$set("public","updateTransitionProbabilities",function(){
         state.log.prob=self$invariants$treeLL[-1]-norm ## p(state_enum)=L(state_enum)/L_norm
     }
     ## Solve for rho_active parameter as function of marginal state probabilities and p_inactive (probabilities are in log space)
-    rho.inact=1-((1-self$params[self$getParamIndicies("autocor.active")])*exp(logSumExp(self$invariants$treeLL[-1])-exp(self$invariants$treeLL[1])))
+    rho.inact=1-((1-self$params[self$getParamIndicies("autocor.active")])*( (1-exp(self$invariants$treeLL[1])) / exp(self$invariants$treeLL[1]) ) )
     ## Set all sub-diagonal values in the first column
     self$transitionLogProb[-1,1]=log(1-self$params[self$getParamIndicies("autocor.active")])
     ## Set all elements of the diagonal to the appropriate autocorrelation
