@@ -43,7 +43,7 @@ findNoiseStates <-  function(state.calls,scale.factors,tree.states,max.sep=1){
             ## ## Get sum of scale factors in active elements for each element of noisy collections ## ##
             one.hot=tree.states[rep.int(noisy.elements[[i]]$state,times=with(noisy.elements[[i]],end-start+1)),,drop=F] ## Extract 0/1 encoding for states
             one.hot[one.hot>1]=1
-            state.indices=unlist(apply(noisy.elements[[i]], 1, function(x) x[1]:x[2])) ## unroll state indicies
+            state.indices=as.numeric(unlist(apply(noisy.elements[[i]], 1, function(x) x[1]:x[2]))) ## unroll state indicies
             ## get relevant scale-factors, zero-out contributions from non-active states, then sum per call
             noisy.elements[[i]][,sf.sum:=unlist(lapply(split(do.call("cbind",lapply(scale.factors[[i]], function(x) x[state.indices] ))*one.hot, rep.int(1:length(noisy.elements[[i]]$state),times=with(noisy.elements[[i]],end-start+1))),sum))]
             
