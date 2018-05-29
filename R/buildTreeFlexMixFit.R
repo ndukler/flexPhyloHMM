@@ -5,6 +5,14 @@ buildTreeFlexMixFit <- function(dataList,tree,preFitEmissions,scaleFactor,sample
     ## Compute number of states
     tree.states=unique(enumerateTreeStates(tree,maxChangepoints,absorbing.state)$config)
     nstates=nrow(tree.states)
+    ## Check if all possible states have been enumerated and set absorbing state to FALSE if they have been
+    if(absorbing.state && nstates > 2^length(tree$tip.label)){
+        warning("All possible states have been enumerated, setting absorbing.state to FALSE")
+        absorbing.state=FALSE
+        tree.states=unique(enumerateTreeStates(tree,maxChangepoints,absorbing.state)$config)
+        nstates=nrow(tree.states)
+    }
+    
     ## Build emission parameter list for each species
     param=unlist(lapply(as.list(tree$tip.label),function(x){
         ncomp=nrow(preFitEmissions[[x]][paramName=="mix.weight"])+1
@@ -76,13 +84,13 @@ buildTreeFlexMixFit <- function(dataList,tree,preFitEmissions,scaleFactor,sample
         if(!stationary.constraint){
             tree.trans=treeTransition$new(params=list(autocor.active=estim.autocor.active,autocor.inactive=estim.autocor.inactive,inactive.freq=estim.inact.freq,rate=10^-4),
                 nstates=nstates,
-                lowerBound=list(autocor.active=0.6,autocor.inactive=0.6,inactive.freq=0.8,rate=10^-8),
-                upperBound=list(autocor.active=0.98,autocor.inactive=0.99999,inactive.freq=0.999,rate=10^-1),
+                lowerBound=list(autocor.active=0.1,autocor.inactive=0.1,inactive.freq=0.001,rate=10^-8),
+                upperBound=list(autocor.active=0.99999,autocor.inactive=0.99999,inactive.freq=0.999,rate=10^3),
                 invariants=list(tree=tree,treeStates=tree.states,absorbing.state=absorbing.state,max.changepoints=maxChangepoints))
         } else {
             tree.trans=treeTransitionSC$new(params=list(autocor.active=estim.autocor.active,inactive.freq=estim.inact.freq,rate=10^-4),nstates=nstates,
-                lowerBound=list(autocor.active=0.6,inactive.freq=0.8,rate=10^-5),
-                upperBound=list(autocor.active=0.98,inactive.freq=0.999,rate=10^-1),
+                lowerBound=list(autocor.active=0.01,inactive.freq=10^-3,rate=10^-8),
+                upperBound=list(autocor.active=0.99999,inactive.freq=0.99999,rate=10^2),
                 invariants=list(tree=tree,treeStates=tree.states,absorbing.state=absorbing.state,max.changepoints=maxChangepoints))    
         }        
     } else if(is.list(treeParams)){ ## If a list of tree parameters is supplied
@@ -95,8 +103,8 @@ buildTreeFlexMixFit <- function(dataList,tree,preFitEmissions,scaleFactor,sample
                 invariants=list(tree=tree,treeStates=tree.states,absorbing.state=absorbing.state,max.changepoints=maxChangepoints))
         } else if(length(treeParams) == 3 & all(names(treeParams) %in% c("autocor.active","inactive.freq","rate"))){
             tree.trans=treeTransitionSC$new(params=treeParams,nstates=nstates,
-                lowerBound=list(autocor.active=0.6,inactive.freq=0.8,rate=10^-5),
-                upperBound=list(autocor.active=0.98,inactive.freq=0.999,rate=10^-1),
+                lowerBound=list(autocor.active=0.01,inactive.freq=10^-3,rate=10^-8),
+                upperBound=list(autocor.active=0.99999,inactive.freq=0.99999,rate=10^2),
                 invariants=list(tree=tree,treeStates=tree.states,absorbing.state=absorbing.state,max.changepoints=maxChangepoints))    
         } else {
             write("Incorrect tree parameter specified",stdout())
