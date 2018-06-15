@@ -31,6 +31,7 @@ Imports:
 	 doParallel,
 	 foreach,
 	 ggbio,
-	 RSQLite
+	 RSQLite,
+	 Rsolnp
 LinkingTo: Rcpp
 RoxygenNote: 6.0.1
