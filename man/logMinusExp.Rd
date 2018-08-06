@@ -4,12 +4,12 @@
 \alias{logMinusExp}
 \title{Vector logMinusExp}
 \usage{
-logMinusExp(a, x)
+logMinusExp(x, y)
 }
 \arguments{
-\item{a}{A scalar}
-
 \item{x}{A numeric vector}
+
+\item{a}{A scalar}
 }
 \description{
 This function computes the  e^a-sum(e^x) of a scalar 'a' and vector 'x' without leaving log space
