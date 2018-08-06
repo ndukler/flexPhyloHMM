@@ -38,7 +38,7 @@ treeEmission$set("public","computeLeafProbabilities",function(){
         weightsList[[z]]=computeWeights(self$params[self$getParamIndicies(paste0("mix.weight.", s))])
     }        
     for (chain in 1:length(self$data)){
-        self$invariants$leafProb[[chain]] = flexPhyloHMM:::computeLeafProb(self$data[[chain]], 
+        self$invariants$leafProb[[chain]] = computeLeafProb(self$data[[chain]], 
                                     self$invariants$scaleFactors[[chain]], self$invariants$deletionRanges[[chain]], 
                                     backList, meansList, weightsList, self$invariants$sampleNormFactors, 
                                     self$invariants$dispersionParams)
@@ -47,10 +47,10 @@ treeEmission$set("public","computeLeafProbabilities",function(){
 
 ## Function that updates the probability of the absorbing state at every step
 treeEmission$set("public","forcedEmissionUpdates",function(){
-    ## Only do forced updates if the model contains an absorbing state
+    ## ## Only do forced updates if the model contains an absorbing state
     if(self$invariants$absorbing.state){
         ## Check that the enumerated emission state probabilities have been calculated
-        if(is.null(self$emissionLogProb)){
+        if(length(self$emissionLogProb)!=length(self$data)){
             self$updateEmissionProbabilities()
         }
         ## Compute the probability of each enumerated tree state and the inactive tree state without data
@@ -65,16 +65,17 @@ treeEmission$set("public","forcedEmissionUpdates",function(){
         ## Compute the probability of all the enumerated leaf patterns
         enum.tree.log.prob=with(pruning.params,treeLL(lp, qConcat = Q.concat, traversal = tt$traversal, tips = tt$tips, logBaseFreq = lbf))
         ## Compute the probability of the tree absorbing state as the complement of all the other states 
-        absorb.tree.log.prob=logMinusExp(0,enum.tree.log.prob) ## Absorbing state prob
+        absorb.tree.log.prob= logMinusExp(0,enum.tree.log.prob) ## Absorbing state prob
         ## For each chain update the probability of the absorbing state
         for(chain in 1:length(self$invariants$leafProb)){
             ## Compute the liklihood over all leaf labelings of the  tree given probabalistic tip labels 
             data.log.prob=with(pruning.params,treeLL(self$invariants$leafProb[[chain]], qConcat = Q.concat, traversal = tt$traversal, tips = tt$tips, logBaseFreq = lbf))
             ## Update the absorbing state probabilities
-            self$emissionLogProb[[chain]][,self$nstates]=absorbingStateLogProb(self$emissionLogProb[[chain]][,-self$nstates],data.log.prob,enum.tree.log.prob,absorb.tree.log.prob)   
+            self$emissionLogProb[[chain]][,self$nstates] <- absorbingStateLogProb(self$emissionLogProb[[chain]][,-self$nstates],data.log.prob,enum.tree.log.prob,absorb.tree.log.prob)
         }
     }
 },overwrite=TRUE)
+
 
 treeEmission$set("public","checkInvariantValidity",function(invariants){
     ## Check that the number of species in the data actually equals the nuimber expected in the tree states
@@ -124,9 +125,9 @@ treeTransitionSC$set("public","updateTransitionProbabilities",function(){
     ## Compute the state marginal probabilities
     if(self$invariants$absorbing.state){
         self$invariants$treeLL=with(pruning.params,treeLL(lp[-self$nstates,], qConcat = Q.concat, traversal = tt$traversal, tips = tt$tips, logBaseFreq = lbf))
-        norm=log(1-exp(self$invariants$treeLL[1])) ## The normalizing factor is the L_norm=L(all states)-L(inactive state)
+        norm=log1p(-exp(self$invariants$treeLL[1])) ## The normalizing factor is the L_norm=L(all states)-L(inactive state)
         enum.state.log.prob=self$invariants$treeLL[-1]-norm ## p(state_enum)=L(state_enum)/L_norm
-        absorb.state.log.prob=log(1-exp(logSumExp(enum.state.log.prob))) ## Absorbing state prob
+        absorb.state.log.prob=log1p(-exp(logSumExp(enum.state.log.prob))) ## Absorbing state prob
         state.log.prob=c(enum.state.log.prob,absorb.state.log.prob)
     } else {
         self$invariants$treeLL=with(pruning.params,treeLL(lp, qConcat = Q.concat, traversal = tt$traversal, tips = tt$tips, logBaseFreq = lbf))
@@ -136,11 +137,11 @@ treeTransitionSC$set("public","updateTransitionProbabilities",function(){
     ## Solve for rho_active parameter as function of marginal state probabilities and p_inactive (probabilities are in log space)
     rho.inact=1-((1-self$params[self$getParamIndicies("autocor.active")])*( (1-exp(self$invariants$treeLL[1])) / exp(self$invariants$treeLL[1]) ) )
     ## Set all sub-diagonal values in the first column
-    self$transitionLogProb[-1,1]=log(1-self$params[self$getParamIndicies("autocor.active")])
+    self$transitionLogProb[-1,1]=log1p(-self$params[self$getParamIndicies("autocor.active")])
     ## Set all elements of the diagonal to the appropriate autocorrelation
     diag(self$transitionLogProb)= log(self$params[self$getParamIndicies("autocor.active")])
     ## Set all values in the first row of the transition matrix
-    self$transitionLogProb[1,-1]=log(1-rho.inact)+state.log.prob
+    self$transitionLogProb[1,-1]=log1p(-rho.inact)+state.log.prob
     self$transitionLogProb[1,1]=log(rho.inact)
 })
 
@@ -162,9 +163,9 @@ treeTransition$set("public","updateTransitionProbabilities",function(){
     ## Compute the state marginal probabilities
     if(self$invariants$absorbing.state){
         self$invariants$treeLL=with(pruning.params,treeLL(lp[-self$nstates,], qConcat = Q.concat, traversal = tt$traversal, tips = tt$tips, logBaseFreq = lbf))
-        norm=log(1-exp(self$invariants$treeLL[1])) ## The normalizing factor is the L_norm=L(all states)-L(inactive state)
+        norm=log1p(-exp(self$invariants$treeLL[1])) ## The normalizing factor is the L_norm=L(all states)-L(inactive state)
         enum.state.log.prob=self$invariants$treeLL[-1]-norm ## p(state_enum)=L(state_enum)/L_norm
-        absorb.state.log.prob=log(1-exp(logSumExp(enum.state.log.prob))) ## Absorbing state prob
+        absorb.state.log.prob=log1p(-exp(logSumExp(enum.state.log.prob))) ## Absorbing state prob
         state.log.prob=c(enum.state.log.prob,absorb.state.log.prob)
     } else {
         self$invariants$treeLL=with(pruning.params,treeLL(lp, qConcat = Q.concat, traversal = tt$traversal, tips = tt$tips, logBaseFreq = lbf))
@@ -172,12 +173,12 @@ treeTransition$set("public","updateTransitionProbabilities",function(){
         state.log.prob=self$invariants$treeLL[-1]-norm ## p(state_enum)=L(state_enum)/L_norm
     }    
     ## Set all sub-diagonal values in the first column
-    self$transitionLogProb[-1,1]=log(1-self$params[self$getParamIndicies("autocor.active")])
+    self$transitionLogProb[-1,1]=log1p(-self$params[self$getParamIndicies("autocor.active")])
     ## Set all elements of the diagonal to the appropriate autocorrelation
     diag(self$transitionLogProb)= log(self$params[self$getParamIndicies("autocor.active")])
     self$transitionLogProb[1,1]=log(self$params[self$getParamIndicies("autocor.inactive")])
     ## Set all values in the first row of the transition matrix
-    self$transitionLogProb[1,-1]=log(1-self$params[self$getParamIndicies("autocor.inactive")])+state.log.prob
+    self$transitionLogProb[1,-1]=log1p(-self$params[self$getParamIndicies("autocor.inactive")])+state.log.prob
 })
 
 
@@ -190,9 +191,10 @@ treeTransition$set("public","updateTransitionProbabilities",function(){
 computeDeletionRanges <- function(scaleFactors,emptyRadius=10){
     return(lapply(scaleFactors,function(x){
         lapply(x,function(y){
-            foo=rle(RcppRoll::roll_max(c(rep(0,emptyRadius),as.numeric(y),rep(0,emptyRadius)),n=2*emptyRadius+1,align="center"))
-            e=cumsum(foo$lengths)[foo$values==0]
-            b=e-foo$lengths[foo$values==0]
+            runs=rle(as.numeric(y)==0)
+            runs$values=runs$values & runs$lengths >= 2*emptyRadius ## Redo RLE to match length criteria
+            e=cumsum(runs$lengths)[runs$values]
+            b=e-runs$lengths[runs$values]
             return(cbind(b,e))
         })
     }))

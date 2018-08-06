@@ -19,6 +19,16 @@ logSumExp <- function(x) {
     .Call('_flexPhyloHMM_logSumExp', PACKAGE = 'flexPhyloHMM', x)
 }
 
+#' Vector logSumExpHP
+#' 
+#' This function computes the sum(e^x) of a vector x without leaving log space in high precision using an iterative calculation
+#'
+#' @param x A numeric vector
+#' @export
+logSumExpHP <- function(x) {
+    .Call('_flexPhyloHMM_logSumExpHP', PACKAGE = 'flexPhyloHMM', x)
+}
+
 #' Vector logMinusExp
 #' 
 #' This function computes the  e^a-sum(e^x) of a scalar 'a' and vector 'x' without leaving log space
@@ -26,8 +36,8 @@ logSumExp <- function(x) {
 #' @param a A scalar
 #' @param x A numeric vector
 #' @export
-logMinusExp <- function(a, x) {
-    .Call('_flexPhyloHMM_logMinusExp', PACKAGE = 'flexPhyloHMM', a, x)
+logMinusExp <- function(x, y) {
+    .Call('_flexPhyloHMM_logMinusExp', PACKAGE = 'flexPhyloHMM', x, y)
 }
 
 updateNBEmisProbCpp <- function(data, scaleFactors, nstates, muBack, muPeak, size) {

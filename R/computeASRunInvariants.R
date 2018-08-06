@@ -20,6 +20,7 @@ computeASRunInvariants <- function(tree,rate,base.freq.zero){
     ## Compute the log value of the partition function over all un-enumerated states 
     ## Na.log=log(1-exp(logSumExp(seqProb(tree,sub.states,parms=list(inactive.prob=base.freq[1],rate=rate))$prob)))
     Q.concat=do.call("rbind",Q.list)
+    Q.concat =t(apply(Q.concat,1,function(x) x-logSumExp(x))) ## Added to make sure that all rowssum to 1 perfectly b/c of small loss of precision in matrix exponentiation
     return(list(tt=tt,Q.concat=Q.concat,rate=rate,lbf=log(base.freq)))
 }
 
