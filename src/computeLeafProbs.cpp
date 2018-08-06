@@ -28,7 +28,7 @@ NumericMatrix computeLeafProb(NumMatList& data, NumMatList& scaleFactors, NumMat
 
     // Iterate over observations
     for(int j=0;j<nobs;j++){
-      if(j >= deletionRanges[i](delInd,0) && j < deletionRanges[i](delInd,1)){ // if in a deletion region just set probability of a peak to -Inf  and log probability of no element to 0
+      if(deletionRanges[i].nrow()>0 && j >= deletionRanges[i](delInd,0) && j < deletionRanges[i](delInd,1)){ // if in a deletion region just set probability of a peak to -Inf  and log probability of no element to 0
 	out(j,sCol)=0;
 	out(j,sCol+1)=- std::numeric_limits<double>::infinity();
       }

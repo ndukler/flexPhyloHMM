@@ -22,7 +22,7 @@ NumericVector treeLL(const NumericMatrix& leafProb, const NumericMatrix& qConcat
       int parentInd=traversal(n,0);
       int childInd=traversal(n,1);
       int qRow=traversal(n,2)*2; // The starting row for the edge
-      
+        
       nodeLogProb(parentInd,0) = nodeLogProb(parentInd,0)+ logSumExp(NumericVector::create(qConcat(qRow,0) + nodeLogProb(childInd,0),qConcat(qRow,1) + nodeLogProb(childInd,1)));
       nodeLogProb(parentInd,1) = nodeLogProb(parentInd,1) + logSumExp(NumericVector::create(qConcat(qRow+1,0) + nodeLogProb(childInd,0),qConcat(qRow+1,1) + nodeLogProb(childInd,1)));
 
@@ -31,3 +31,15 @@ NumericVector treeLL(const NumericMatrix& leafProb, const NumericMatrix& qConcat
   }
   return(asLogProb);
 }
+
+// double kahanSumTwo(double x1, double x2){
+//   double ks = 0;
+//   double c = 0;
+//   double y = x1 -c;
+//   double kt = ks +y;
+//   c=(kt-ks)-y;
+//   ks=kt;
+//   y=x2-c;
+//   kt=ks+y;
+//   return(kt);
+// }

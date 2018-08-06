@@ -242,3 +242,32 @@ NumericMatrix updateTreeEnumeratedStates(NumericMatrix& leafProbs, NumericMatrix
   }
   return(out);
 }
+
+// Kahan summation version causes problems with -Inf-(-Inf)
+// // [[Rcpp::export]]
+// NumericMatrix updateTreeEnumeratedStates(NumericMatrix& leafProbs, NumericMatrix& treeStates, int nstates, int absorbingState) {
+//   int nspecies=treeStates.ncol();
+//   int nobs=leafProbs.nrow();
+//   // Initialize logProb output matrix
+//   NumericMatrix out(nobs,nstates);
+//   // Iterate over sites
+//   for(int j=0;j<nobs;j++){
+//     // Now iterate over states
+//     for(int l=0;l<nstates-absorbingState;l++){
+//       double ks=0.0;
+//       double c=0.0;      
+//       // Add species p(x|l_k) using kahan summation for precision
+//       for(int i=0;i<nspecies;i++){
+// 	int specCol=i*2;
+// 	double y = leafProbs(j,specCol+treeStates(l,i)) - c;
+// 	double kt =  ks + y;
+// 	c = (kt-ks) -y;
+// 	ks=kt;
+//       }
+//       out(j,l)=ks;
+//     }
+//   }
+//   return(out);
+// }
+
+

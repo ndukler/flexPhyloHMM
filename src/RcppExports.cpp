@@ -48,14 +48,24 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// logMinusExp
-double logMinusExp(double a, NumericVector x);
-RcppExport SEXP _flexPhyloHMM_logMinusExp(SEXP aSEXP, SEXP xSEXP) {
+// logSumExpHP
+double logSumExpHP(NumericVector x);
+RcppExport SEXP _flexPhyloHMM_logSumExpHP(SEXP xSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
-    Rcpp::traits::input_parameter< double >::type a(aSEXP);
     Rcpp::traits::input_parameter< NumericVector >::type x(xSEXP);
-    rcpp_result_gen = Rcpp::wrap(logMinusExp(a, x));
+    rcpp_result_gen = Rcpp::wrap(logSumExpHP(x));
+    return rcpp_result_gen;
+END_RCPP
+}
+// logMinusExp
+double logMinusExp(double x, NumericVector y);
+RcppExport SEXP _flexPhyloHMM_logMinusExp(SEXP xSEXP, SEXP ySEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::traits::input_parameter< double >::type x(xSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type y(ySEXP);
+    rcpp_result_gen = Rcpp::wrap(logMinusExp(x, y));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -230,6 +240,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_flexPhyloHMM_absorbingStateLogProb", (DL_FUNC) &_flexPhyloHMM_absorbingStateLogProb, 4},
     {"_flexPhyloHMM_computeLeafProb", (DL_FUNC) &_flexPhyloHMM_computeLeafProb, 8},
     {"_flexPhyloHMM_logSumExp", (DL_FUNC) &_flexPhyloHMM_logSumExp, 1},
+    {"_flexPhyloHMM_logSumExpHP", (DL_FUNC) &_flexPhyloHMM_logSumExpHP, 1},
     {"_flexPhyloHMM_logMinusExp", (DL_FUNC) &_flexPhyloHMM_logMinusExp, 2},
     {"_flexPhyloHMM_updateNBEmisProbCpp", (DL_FUNC) &_flexPhyloHMM_updateNBEmisProbCpp, 6},
     {"_flexPhyloHMM_updateNBEmisProbDTCpp", (DL_FUNC) &_flexPhyloHMM_updateNBEmisProbDTCpp, 6},
