@@ -19,4 +19,5 @@ maskNoiseCalls <- function(thmm,noise.calls,noise.threshold=16){
             }  
         }
     }
+    thmm$emission$computeLeafProbabilities() ## update leaf probabilities to maintain consistency
 }
