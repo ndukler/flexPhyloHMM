@@ -8,7 +8,7 @@
 #' @export
 computeASRunInvariants <- function(tree,rate,base.freq.zero){
     ## Ensure the tree is sorted correctly
-    tree=reorder(tree,"postorder")
+    tree=ape::reorder.phylo(tree,"postorder")
     base.freq=c(base.freq.zero,1-base.freq.zero)
     ## Pre-calculate everything needed for an iterative traversal
     tt=createTraversalTable(tree)

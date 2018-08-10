@@ -5,6 +5,11 @@ rhoI_Ineq <- function(x,hmmObj,scale=1){
     ## Save parameter values
     eparms=hmmObj$emission$params
     tparms=hmmObj$transition$params
+
+    ## Write constraint status out to log file
+    fp=file.path(hmmObj$logDir,"parameterUpdateTimer.txt")
+    write("---Evaluating Constraint status---",file=fp,append=TRUE)
+    write(paste("x:", paste(x,collapse=" ")),file=fp,append=TRUE)
     
     ## Overwrite object parameters with new parameter values
     hmmObj$emission$params[!hmmObj$emission$fixed] = x[1:sum(!hmmObj$emission$fixed)]
@@ -18,9 +23,7 @@ rhoI_Ineq <- function(x,hmmObj,scale=1){
         tips = tt$tips, logBaseFreq = lbf))
     rho.inact = 1 - ((1 - hmmObj$transition$params[hmmObj$transition$getParamIndicies("autocor.active")]) * 
         ((1 - exp(p.so))/exp(p.so)))
-    ## Write constraint status out to log file
-    fp=file.path(hmmObj$logDir,"parameterUpdateTimer.txt")
-    write("---Evaluating Constraint status---",file=fp,append=TRUE)
+  
     write(paste("Transition parameter vector", paste(hmmObj$transition$params,collapse=",")),file=fp,append=TRUE)
     write(paste0("rho.inact=", rho.inact),file=fp,append=TRUE)
     ## Restore original parameter values
@@ -42,7 +45,7 @@ fitPhyloHMM <- function(hmm,nthreads=1){
     tryCatch({
         sink(file=file.path(hmm$logDir,"optim_log.txt"),append=TRUE)
         write(paste0(paste0(rep("-",30),collapse=""),"START",paste0(rep("-",30),collapse="")),stdout())
-        final.params=Rsolnp::solnp(fun=updateAllParams, pars=c(hmm$emission$params[!hmm$emission$fixed],hmm$transition$params[!hmm$transition$fixed]),
+        final.params=Rsolnp::solnp(fun=flexHMM::updateAllParams, pars=c(hmm$emission$params[!hmm$emission$fixed],hmm$transition$params[!hmm$transition$fixed]),
             LB = c(hmm$emission$lowerBound[!hmm$emission$fixed],hmm$transition$lowerBound[!hmm$transition$fixed]),
             UB = c(hmm$emission$upperBound[!hmm$emission$fixed],hmm$transition$upperBound[!hmm$transition$fixed]),
             ineqfun=rhoI_Ineq, ineqLB=0.05,ineqUB=1,

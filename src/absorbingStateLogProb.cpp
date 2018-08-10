@@ -7,7 +7,7 @@ using namespace Rcpp;
 NumericVector absorbingStateLogProb(NumericMatrix& conditionalEmisLogProb, NumericVector& dataLogProb, NumericVector& enumLogProb, double absorbLogProb ){
   NumericVector asLogProb(conditionalEmisLogProb.nrow());
   for(int i=0; i<conditionalEmisLogProb.nrow();i++){
-    double jitter = logSumExp(dataLogProb(i),dataLogProb(i)-29.0);
+    double jitter = logSumExp(dataLogProb(i),dataLogProb(i)-27.0);
     // double jitter = dataLogProb(i);
     asLogProb(i)=logMinusExp(jitter,conditionalEmisLogProb(i,_)+enumLogProb)-absorbLogProb;
   }
