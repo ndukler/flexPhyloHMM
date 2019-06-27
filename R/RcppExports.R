@@ -5,6 +5,10 @@ absorbingStateLogProb <- function(conditionalEmisLogProb, dataLogProb, enumLogPr
     .Call('_flexPhyloHMM_absorbingStateLogProb', PACKAGE = 'flexPhyloHMM', conditionalEmisLogProb, dataLogProb, enumLogProb, absorbLogProb)
 }
 
+calcPAF <- function(eList, alleleProbs, tipLabels, basename, chrom, start, binSize) {
+    invisible(.Call('_flexPhyloHMM_calcPAF', PACKAGE = 'flexPhyloHMM', eList, alleleProbs, tipLabels, basename, chrom, start, binSize))
+}
+
 computeLeafProb <- function(data, scaleFactors, deletionRanges, muBack, mixPeak, weights, sampleNormFactor, dispParams) {
     .Call('_flexPhyloHMM_computeLeafProb', PACKAGE = 'flexPhyloHMM', data, scaleFactors, deletionRanges, muBack, mixPeak, weights, sampleNormFactor, dispParams)
 }
@@ -25,8 +29,8 @@ logSumExp <- function(x) {
 #'
 #' @param x A numeric vector
 #' @export
-logSumExpHP <- function(x) {
-    .Call('_flexPhyloHMM_logSumExpHP', PACKAGE = 'flexPhyloHMM', x)
+logSumExpHP <- function(z) {
+    .Call('_flexPhyloHMM_logSumExpHP', PACKAGE = 'flexPhyloHMM', z)
 }
 
 #' Vector logMinusExp
